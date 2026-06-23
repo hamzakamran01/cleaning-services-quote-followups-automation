@@ -1,0 +1,192 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Company {
+  id              String   @id @default(uuid()) @db.Uuid
+  name            String
+  email           String
+  phone           String?
+  website         String?
+  logoUrl         String?  @map("logo_url")
+  tagline         String?
+  address         String?
+  city            String?
+  state           String?
+  zip             String?
+  baseLaborRate   Decimal  @default(22.00) @map("base_labor_rate") @db.Decimal(10, 2)
+  overheadPct     Decimal  @default(25.00) @map("overhead_pct") @db.Decimal(5, 2)
+  targetMarginPct Decimal  @default(30.00) @map("target_margin_pct") @db.Decimal(5, 2)
+  smtpFromEmail   String?  @map("smtp_from_email")
+  smtpFromName    String?  @map("smtp_from_name")
+  resendApiKey    String?  @map("resend_api_key")
+  differentiators String[]
+  certifications  String[]
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  users              User[]
+  prospects          Prospect[]
+  proposals          Proposal[]
+  followUpSequences  FollowUpSequence[]
+
+  @@map("companies")
+}
+
+model User {
+  id        String   @id @db.Uuid
+  companyId String   @map("company_id") @db.Uuid
+  fullName  String   @map("full_name")
+  email     String   @unique
+  role      String   @default("rep")
+  phone     String?
+  avatarUrl String?  @map("avatar_url")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  prospects Prospect[]
+  proposals Proposal[]
+
+  @@map("users")
+}
+
+model Prospect {
+  id               String   @id @default(uuid()) @db.Uuid
+  companyId        String   @map("company_id") @db.Uuid
+  assignedTo       String?  @map("assigned_to") @db.Uuid
+  fullName         String   @map("full_name")
+  businessName     String   @map("business_name")
+  email            String
+  phone            String?
+  website          String?
+  facilityType     String   @map("facility_type")
+  squareFootage    Int      @map("square_footage")
+  numFloors        Int      @default(1) @map("num_floors")
+  numRestrooms     Int      @default(1) @map("num_restrooms")
+  floorCarpetPct   Int      @default(0) @map("floor_carpet_pct")
+  floorHardwoodPct Int      @default(0) @map("floor_hardwood_pct")
+  floorTilePct     Int      @default(100) @map("floor_tile_pct")
+  hasKitchen       Boolean  @default(false) @map("has_kitchen")
+  specialAreas     String[] @map("special_areas")
+  notes            String?
+  source           String?
+  status           String   @default("active")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  company   Company    @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  assignee  User?      @relation(fields: [assignedTo], references: [id])
+  proposals Proposal[]
+
+  @@index([companyId])
+  @@map("prospects")
+}
+
+model Proposal {
+  id                String    @id @default(uuid()) @db.Uuid
+  companyId         String    @map("company_id") @db.Uuid
+  prospectId        String    @map("prospect_id") @db.Uuid
+  createdBy         String?   @map("created_by") @db.Uuid
+  proposalNumber    String    @unique @map("proposal_number")
+  version           Int       @default(1)
+  services          String[]
+  visitFrequency    String    @map("visit_frequency")
+  serviceTime       String?   @map("service_time")
+  contractDuration  String    @default("12_months") @map("contract_duration")
+  startDate         DateTime? @map("start_date") @db.Date
+  monthlyPrice      Decimal   @map("monthly_price") @db.Decimal(10, 2)
+  annualPrice       Decimal   @map("annual_price") @db.Decimal(10, 2)
+  discountPct       Decimal   @default(0) @map("discount_pct") @db.Decimal(5, 2)
+  lineItems         Json      @map("line_items")
+  executiveSummary  String?   @map("executive_summary")
+  scopeOfWork       Json?     @map("scope_of_work")
+  ourApproach       String[]  @map("our_approach")
+  differentiators   String[]
+  pricingNarrative  String?   @map("pricing_narrative")
+  terms             String?
+  nextSteps         String?   @map("next_steps")
+  pdfUrl            String?   @map("pdf_url")
+  trackingToken     String    @unique @default(uuid()) @map("tracking_token")
+  status            String    @default("draft")
+  validUntil        DateTime? @map("valid_until") @db.Date
+  sentAt            DateTime? @map("sent_at")
+  wonAt             DateTime? @map("won_at")
+  lostAt            DateTime? @map("lost_at")
+  lostReason        String?   @map("lost_reason")
+  followUpCount     Int       @default(0) @map("follow_up_count")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  company        Company                  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  prospect       Prospect                 @relation(fields: [prospectId], references: [id], onDelete: Cascade)
+  creator        User?                    @relation(fields: [createdBy], references: [id])
+  trackingEvents ProposalTrackingEvent[]
+  followUpLogs   FollowUpLog[]
+
+  @@index([companyId])
+  @@index([status])
+  @@index([trackingToken])
+  @@map("proposals")
+}
+
+model ProposalTrackingEvent {
+  id              String   @id @default(uuid()) @db.Uuid
+  proposalId      String   @map("proposal_id") @db.Uuid
+  eventType       String   @map("event_type")
+  ipAddress       String?  @map("ip_address")
+  userAgent       String?  @map("user_agent")
+  deviceType      String?  @map("device_type")
+  city            String?
+  country         String?
+  durationSeconds Int?     @map("duration_seconds")
+  metadata        Json?
+  occurredAt      DateTime @default(now()) @map("occurred_at")
+
+  proposal Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+
+  @@index([proposalId])
+  @@map("proposal_tracking_events")
+}
+
+model FollowUpSequence {
+  id            String   @id @default(uuid()) @db.Uuid
+  companyId     String   @map("company_id") @db.Uuid
+  name          String
+  triggerEvent  String   @map("trigger_event")
+  delayHours    Int      @map("delay_hours")
+  sequenceOrder Int      @map("sequence_order")
+  subjectPrompt String   @map("subject_prompt")
+  bodyPrompt    String   @map("body_prompt")
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  company      Company       @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  followUpLogs FollowUpLog[]
+
+  @@map("follow_up_sequences")
+}
+
+model FollowUpLog {
+  id            String    @id @default(uuid()) @db.Uuid
+  proposalId    String    @map("proposal_id") @db.Uuid
+  sequenceId    String?   @map("sequence_id") @db.Uuid
+  sequenceStep  Int       @map("sequence_step")
+  subject       String
+  bodyHtml      String    @map("body_html")
+  sentAt        DateTime  @default(now()) @map("sent_at")
+  openedAt      DateTime? @map("opened_at")
+  repliedAt     DateTime? @map("replied_at")
+  resendEmailId String?   @map("resend_email_id")
+
+  proposal Proposal          @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  sequence FollowUpSequence? @relation(fields: [sequenceId], references: [id])
+
+  @@index([proposalId])
+  @@map("follow_up_logs")
+}
