@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createProspect, listProspects } from "@/lib/services/proposals/repository";
 
+export const dynamic = "force-dynamic";
+
 const createProspectSchema = z.object({
   fullName: z.string().min(2),
   businessName: z.string().min(2),
@@ -22,14 +24,14 @@ const createProspectSchema = z.object({
 });
 
 export async function GET() {
-  return NextResponse.json({ prospects: listProspects() });
+  return NextResponse.json({ prospects: await listProspects() });
 }
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const parsed = createProspectSchema.parse(body);
-    const prospect = createProspect(parsed);
+    const prospect = await createProspect(parsed);
     return NextResponse.json({ prospect }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {

@@ -4,8 +4,10 @@ import { buildProposalHtml } from "@/lib/services/proposals/document";
 import { generateProposalPdf, readStoredPdf } from "@/lib/services/pdf/generator";
 import { updateProposal } from "@/lib/services/proposals/repository";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request, { params }: { params: { id: string } }) {
-  const data = getProposalById(params.id);
+  const data = await getProposalById(params.id);
   if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const { searchParams } = new URL(request.url);
@@ -17,7 +19,7 @@ export async function GET(request: Request, { params }: { params: { id: string }
       const result = await generateProposalPdf(data.company, data.prospect, data.proposal);
       if (result) {
         buffer = result.buffer;
-        updateProposal(params.id, { pdfUrl: result.publicUrl });
+        await updateProposal(params.id, { pdfUrl: result.publicUrl });
       }
     }
 

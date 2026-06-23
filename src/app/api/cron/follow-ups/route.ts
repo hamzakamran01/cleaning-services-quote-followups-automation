@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { runFollowUpEngine } from "@/lib/services/follow-up/engine";
 import { processNotOpenedProposals, processExpiredProposals } from "@/lib/services/proposals/repository";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
@@ -14,8 +16,8 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const expired = processExpiredProposals();
-  const notOpened = processNotOpenedProposals();
+  const expired = await processExpiredProposals();
+  const notOpened = await processNotOpenedProposals();
   const results = await runFollowUpEngine();
 
   return NextResponse.json({

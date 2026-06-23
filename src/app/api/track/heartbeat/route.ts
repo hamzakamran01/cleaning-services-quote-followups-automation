@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { recordTrackingEvent, getProposalByToken } from "@/lib/services/proposals/repository";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -10,7 +12,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Token required" }, { status: 400 });
     }
 
-    const data = getProposalByToken(token);
+    const data = await getProposalByToken(token);
     if (!data) {
       return NextResponse.json({ error: "Not found" }, { status: 404 });
     }
@@ -22,7 +24,7 @@ export async function POST(request: Request) {
           ? "page_session"
           : "page_engagement";
 
-    recordTrackingEvent(data.proposal.id, eventType, {
+    await recordTrackingEvent(data.proposal.id, eventType, {
       durationSeconds,
       metadata: { section },
     });

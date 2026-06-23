@@ -1,62 +1,180 @@
 import { prisma } from "@/lib/db";
-import { DEMO_ACTIVITY, DEMO_COMPANY, DEMO_PROPOSALS } from "@/lib/demo/data";
+import { buildSeedDataset } from "@/lib/demo/seed-data";
 
 async function main() {
   console.log("Seeding CleanProposal AI demo data...");
 
-  const company = await prisma.company.upsert({
-    where: { id: "00000000-0000-4000-8000-000000000001" },
+  const data = buildSeedDataset();
+
+  await prisma.company.upsert({
+    where: { id: data.company.id },
     update: {},
     create: {
-      id: "00000000-0000-4000-8000-000000000001",
-      name: DEMO_COMPANY.name,
-      email: DEMO_COMPANY.email,
-      phone: DEMO_COMPANY.phone,
-      tagline: DEMO_COMPANY.tagline,
-      differentiators: DEMO_COMPANY.differentiators,
-      certifications: DEMO_COMPANY.certifications,
-      baseLaborRate: DEMO_COMPANY.baseLaborRate,
-      overheadPct: DEMO_COMPANY.overheadPct,
-      targetMarginPct: DEMO_COMPANY.targetMarginPct,
+      id: data.company.id,
+      name: data.company.name,
+      email: data.company.email,
+      phone: data.company.phone,
+      website: data.company.website,
+      tagline: data.company.tagline,
+      address: data.company.address,
+      city: data.company.city,
+      state: data.company.state,
+      zip: data.company.zip,
+      baseLaborRate: data.company.baseLaborRate,
+      overheadPct: data.company.overheadPct,
+      targetMarginPct: data.company.targetMarginPct,
+      smtpFromEmail: data.company.smtpFromEmail,
+      smtpFromName: data.company.smtpFromName,
+      differentiators: data.company.differentiators,
+      certifications: data.company.certifications,
     },
   });
 
-  console.log(`Company: ${company.name}`);
+  await prisma.user.upsert({
+    where: { id: data.user.id },
+    update: {},
+    create: {
+      id: data.user.id,
+      companyId: data.user.companyId,
+      fullName: data.user.fullName,
+      email: data.user.email,
+      role: data.user.role,
+      phone: data.user.phone,
+    },
+  });
 
-  for (const p of DEMO_PROPOSALS) {
-    const prospect = await prisma.prospect.create({
-      data: {
-        companyId: company.id,
-        fullName: p.contactName,
-        businessName: p.companyName,
-        email: `${p.contactName.toLowerCase().replace(/\s/g, ".")}@example.com`,
-        facilityType: "office",
-        squareFootage: 15000,
-        numRestrooms: 6,
-        status: p.status === "won" ? "won" : "active",
-      },
+  for (const seq of data.sequences) {
+    await prisma.followUpSequence.upsert({
+      where: { id: seq.id },
+      update: {},
+      create: seq,
     });
+  }
 
-    await prisma.proposal.create({
-      data: {
-        companyId: company.id,
-        prospectId: prospect.id,
-        proposalNumber: p.proposalNumber,
-        services: ["general_janitorial"],
-        visitFrequency: "3x_week",
-        contractDuration: "12_months",
-        monthlyPrice: p.monthlyPrice,
-        annualPrice: p.annualPrice,
-        lineItems: [{ service: "General Janitorial", frequency: "3x/week", monthlyCost: p.monthlyPrice }],
+  for (const p of data.prospects) {
+    await prisma.prospect.upsert({
+      where: { id: p.id },
+      update: {},
+      create: {
+        id: p.id,
+        companyId: p.companyId,
+        assignedTo: p.assignedTo,
+        fullName: p.fullName,
+        businessName: p.businessName,
+        email: p.email,
+        phone: p.phone,
+        website: p.website,
+        facilityType: p.facilityType,
+        squareFootage: p.squareFootage,
+        numFloors: p.numFloors,
+        numRestrooms: p.numRestrooms,
+        floorCarpetPct: p.floorCarpetPct,
+        floorHardwoodPct: p.floorHardwoodPct,
+        floorTilePct: p.floorTilePct,
+        hasKitchen: p.hasKitchen,
+        specialAreas: p.specialAreas,
+        notes: p.notes,
+        source: p.source,
         status: p.status,
-        followUpCount: p.followUpCount,
-        sentAt: p.sentAt ? new Date(p.sentAt) : null,
-        executiveSummary: `Proposal for ${p.companyName}`,
       },
     });
   }
 
-  console.log(`Seeded ${DEMO_PROPOSALS.length} proposals`);
+  for (const p of data.proposals) {
+    await prisma.proposal.upsert({
+      where: { id: p.id },
+      update: {},
+      create: {
+        id: p.id,
+        companyId: p.companyId,
+        prospectId: p.prospectId,
+        createdBy: p.createdBy,
+        proposalNumber: p.proposalNumber,
+        version: p.version,
+        services: p.services,
+        visitFrequency: p.visitFrequency,
+        serviceTime: p.serviceTime,
+        contractDuration: p.contractDuration,
+        startDate: p.startDate,
+        monthlyPrice: p.monthlyPrice,
+        annualPrice: p.annualPrice,
+        discountPct: p.discountPct,
+        lineItems: p.lineItems,
+        executiveSummary: p.executiveSummary,
+        scopeOfWork: p.scopeOfWork,
+        ourApproach: p.ourApproach,
+        differentiators: p.differentiators,
+        pricingNarrative: p.pricingNarrative,
+        terms: p.terms,
+        nextSteps: p.nextSteps,
+        trackingToken: p.trackingToken,
+        status: p.status,
+        validUntil: p.validUntil,
+        sentAt: p.sentAt,
+        wonAt: p.wonAt,
+        lostAt: p.lostAt,
+        followUpCount: p.followUpCount,
+        sequencePaused: p.sequencePaused,
+      },
+    });
+  }
+
+  for (const e of data.trackingEvents) {
+    await prisma.proposalTrackingEvent.upsert({
+      where: { id: e.id },
+      update: {},
+      create: {
+        id: e.id,
+        proposalId: e.proposalId,
+        eventType: e.eventType,
+        deviceType: e.deviceType,
+        occurredAt: e.occurredAt,
+      },
+    });
+  }
+
+  for (const n of data.notifications) {
+    await prisma.notification.upsert({
+      where: { id: n.id },
+      update: {},
+      create: {
+        id: n.id,
+        companyId: n.companyId,
+        proposalId: n.proposalId,
+        type: n.type,
+        title: n.title,
+        message: n.message,
+        read: n.read,
+        createdAt: n.createdAt,
+      },
+    });
+  }
+
+  for (const l of data.followUpLogs) {
+    await prisma.followUpLog.upsert({
+      where: { id: l.id },
+      update: {},
+      create: {
+        id: l.id,
+        proposalId: l.proposalId,
+        sequenceId: l.sequenceId,
+        sequenceStep: l.sequenceStep,
+        triggerEvent: l.triggerEvent,
+        subject: l.subject,
+        bodyHtml: l.bodyHtml,
+        sentAt: l.sentAt,
+      },
+    });
+  }
+
+  console.log(`Seeded:`);
+  console.log(`  - 1 company, 1 user`);
+  console.log(`  - ${data.sequences.length} follow-up sequences`);
+  console.log(`  - ${data.prospects.length} prospects`);
+  console.log(`  - ${data.proposals.length} proposals`);
+  console.log(`  - ${data.trackingEvents.length} tracking events`);
+  console.log(`  - ${data.notifications.length} notifications`);
+  console.log(`  - ${data.followUpLogs.length} follow-up logs`);
   console.log("Done.");
 }
 

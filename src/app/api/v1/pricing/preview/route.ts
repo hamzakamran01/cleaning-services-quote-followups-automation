@@ -3,6 +3,8 @@ import { calculatePricing } from "@/lib/pricing/engine";
 import { pricingPreviewSchema } from "@/lib/validations/intake";
 import type { FacilityType, ServiceType, VisitFrequency, ContractDuration } from "@/lib/constants";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();

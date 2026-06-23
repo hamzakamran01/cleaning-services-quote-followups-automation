@@ -3,16 +3,18 @@ import { getProposalById, updateProposal, markProposalStatus, markProposalReplie
 import { contentFromProposal } from "@/lib/store/types";
 import { requireApiAuth } from "@/lib/auth/api";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
   const auth = await requireApiAuth();
   if (auth instanceof NextResponse) return auth;
 
-  const data = getProposalById(params.id);
+  const data = await getProposalById(params.id);
   if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const { proposal, prospect, company } = data;
-  const events = getTrackingEvents(proposal.id);
-  const followUpLogs = getFollowUpLogs(proposal.id);
+  const events = await getTrackingEvents(proposal.id);
+  const followUpLogs = await getFollowUpLogs(proposal.id);
 
   return NextResponse.json({
     proposal: {
@@ -31,18 +33,18 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     const body = await request.json();
 
     if (body.status === "won" || body.status === "lost") {
-      const updated = markProposalStatus(params.id, body.status, { lostReason: body.lostReason });
+      const updated = await markProposalStatus(params.id, body.status, { lostReason: body.lostReason });
       if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
       return NextResponse.json({ proposal: updated });
     }
 
     if (body.replied === true) {
-      const updated = markProposalReplied(params.id);
+      const updated = await markProposalReplied(params.id);
       if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
       return NextResponse.json({ proposal: updated });
     }
 
-    const updated = updateProposal(params.id, {
+    const updated = await updateProposal(params.id, {
       content: body.content,
       monthlyPrice: body.monthlyPrice,
       annualPrice: body.annualPrice,

@@ -6,13 +6,13 @@ interface PageProps {
   params: { token: string };
 }
 
-export default function PublicProposalPage({ params }: PageProps) {
-  const data = getProposalByToken(params.token);
+export default async function PublicProposalPage({ params }: PageProps) {
+  const data = await getProposalByToken(params.token);
   if (!data) notFound();
 
   const { proposal, prospect, company } = data;
 
-  recordTrackingEvent(proposal.id, "proposal_viewed", {
+  await recordTrackingEvent(proposal.id, "proposal_viewed", {
     deviceType: "unknown",
   });
 

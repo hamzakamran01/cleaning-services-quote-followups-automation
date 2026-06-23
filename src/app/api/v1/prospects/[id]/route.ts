@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getProspectById, updateProspect } from "@/lib/services/proposals/repository";
 
+export const dynamic = "force-dynamic";
+
 const updateSchema = z.object({
   fullName: z.string().min(2).optional(),
   businessName: z.string().min(2).optional(),
@@ -17,7 +19,7 @@ const updateSchema = z.object({
 });
 
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
-  const data = getProspectById(params.id);
+  const data = await getProspectById(params.id);
   if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
   return NextResponse.json(data);
 }
@@ -26,7 +28,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   try {
     const body = await request.json();
     const parsed = updateSchema.parse(body);
-    const prospect = updateProspect(params.id, parsed);
+    const prospect = await updateProspect(params.id, parsed);
     if (!prospect) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json({ prospect });
   } catch (error) {

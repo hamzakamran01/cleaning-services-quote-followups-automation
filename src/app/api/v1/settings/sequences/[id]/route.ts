@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { updateFollowUpSequence } from "@/lib/services/proposals/repository";
 
+export const dynamic = "force-dynamic";
+
 const updateSchema = z.object({
   delayHours: z.coerce.number().min(1).max(720).optional(),
   subjectPrompt: z.string().min(1).optional(),
@@ -13,7 +15,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
   try {
     const body = await request.json();
     const parsed = updateSchema.parse(body);
-    const sequence = updateFollowUpSequence(params.id, parsed);
+    const sequence = await updateFollowUpSequence(params.id, parsed);
     if (!sequence) return NextResponse.json({ error: "Not found" }, { status: 404 });
     return NextResponse.json({ sequence });
   } catch (error) {

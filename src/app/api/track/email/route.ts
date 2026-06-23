@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { recordTrackingEvent } from "@/lib/services/proposals/repository";
 import { getProposalByToken } from "@/lib/services/proposals/repository";
 
+export const dynamic = "force-dynamic";
+
 const PIXEL = Buffer.from(
   "R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7",
   "base64"
@@ -12,10 +14,10 @@ export async function GET(request: Request) {
   const token = searchParams.get("token");
 
   if (token) {
-    const data = getProposalByToken(token);
+    const data = await getProposalByToken(token);
     if (data) {
       const ua = request.headers.get("user-agent") ?? undefined;
-      recordTrackingEvent(data.proposal.id, "email_opened", {
+      await recordTrackingEvent(data.proposal.id, "email_opened", {
         userAgent: ua,
         deviceType: ua?.includes("Mobile") ? "mobile" : "desktop",
       });

@@ -12,7 +12,7 @@ export async function generateProposalContent(
   pricing: { monthlyPrice: number; annualPrice: number; lineItems: unknown[] },
   companyOverride?: CompanyRecord
 ): Promise<ProposalContent> {
-  const company = companyOverride ?? getCompany();
+  const company = companyOverride ?? (await getCompany());
 
   if (process.env.ANTHROPIC_API_KEY) {
     try {
@@ -57,7 +57,7 @@ export async function generateFollowUpEmail(
     proposalNumber: string;
   }
 ): Promise<{ subject: string; bodyHtml: string }> {
-  const company = getCompany();
+  const company = await getCompany();
   const templates: Record<string, { subject: string; body: string }> = {
     not_opened_48h: {
       subject: `Quick check-in — Proposal for ${context.companyName}`,

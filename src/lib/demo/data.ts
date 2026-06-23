@@ -76,7 +76,7 @@ export const DEMO_PROPOSALS: DemoProposal[] = [
   },
   {
     id: "4",
-    proposalNumber: "CLN-2026-1015",
+    proposalNumber: "CLN-2026-1033",
     companyName: "The Grand Hotel Group",
     contactName: "Michael Torres",
     monthlyPrice: 8400,

@@ -17,3 +17,10 @@ if (process.env.NODE_ENV !== "production") {
 export function isDatabaseConfigured(): boolean {
   return Boolean(process.env.DATABASE_URL && !process.env.DATABASE_URL.includes("[PASSWORD]"));
 }
+
+/** Default demo company UUID — matches database/schema.sql and prisma seed */
+export const DEMO_COMPANY_ID =
+  process.env.DEMO_COMPANY_ID ?? "00000000-0000-4000-8000-000000000001";
+
+export const DEMO_USER_ID =
+  process.env.DEMO_USER_ID ?? "00000000-0000-4000-8000-000000000002";

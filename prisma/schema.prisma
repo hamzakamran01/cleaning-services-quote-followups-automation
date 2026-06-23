@@ -35,6 +35,7 @@ model Company {
   prospects          Prospect[]
   proposals          Proposal[]
   followUpSequences  FollowUpSequence[]
+  notifications      Notification[]
 
   @@map("companies")
 }
@@ -120,6 +121,7 @@ model Proposal {
   lostAt            DateTime? @map("lost_at")
   lostReason        String?   @map("lost_reason")
   followUpCount     Int       @default(0) @map("follow_up_count")
+  sequencePaused    Boolean   @default(false) @map("sequence_paused")
   createdAt         DateTime  @default(now()) @map("created_at")
   updatedAt         DateTime  @updatedAt @map("updated_at")
 
@@ -128,6 +130,7 @@ model Proposal {
   creator        User?                    @relation(fields: [createdBy], references: [id])
   trackingEvents ProposalTrackingEvent[]
   followUpLogs   FollowUpLog[]
+  notifications  Notification[]
 
   @@index([companyId])
   @@index([status])
@@ -177,6 +180,7 @@ model FollowUpLog {
   proposalId    String    @map("proposal_id") @db.Uuid
   sequenceId    String?   @map("sequence_id") @db.Uuid
   sequenceStep  Int       @map("sequence_step")
+  triggerEvent  String    @map("trigger_event")
   subject       String
   bodyHtml      String    @map("body_html")
   sentAt        DateTime  @default(now()) @map("sent_at")
@@ -189,4 +193,22 @@ model FollowUpLog {
 
   @@index([proposalId])
   @@map("follow_up_logs")
+}
+
+model Notification {
+  id         String   @id @default(uuid()) @db.Uuid
+  companyId  String   @map("company_id") @db.Uuid
+  proposalId String?  @map("proposal_id") @db.Uuid
+  type       String
+  title      String
+  message    String
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  company  Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  proposal Proposal? @relation(fields: [proposalId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
+  @@index([proposalId])
+  @@map("notifications")
 }

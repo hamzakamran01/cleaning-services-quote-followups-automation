@@ -1,7 +1,13 @@
-import { mutateStore, getStore } from "@/lib/store";
 import { generateFollowUpEmail } from "@/lib/services/ai/claude";
 import { sendEmail } from "@/lib/services/email/resend";
-import { listProposals } from "@/lib/services/proposals/repository";
+import {
+  listProposals,
+  getStoreSnapshotForFollowUp,
+  appendFollowUpLog,
+  createFollowUpNotification,
+  markProposalSent,
+  getProposalById,
+} from "@/lib/services/proposals/repository";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -18,11 +24,11 @@ function hoursSince(timestamp: number | null, now: number): number {
 }
 
 export async function runFollowUpEngine() {
-  const store = getStore();
+  const store = await getStoreSnapshotForFollowUp();
   const results: { proposalId: string; sequence: string; sent: boolean }[] = [];
   const now = Date.now();
 
-  const eligible = listProposals().filter(
+  const eligible = (await listProposals()).filter(
     (p) =>
       !p.sequencePaused &&
       p.status !== "won" &&
@@ -121,36 +127,22 @@ export async function runFollowUpEngine() {
           trackingPixelUrl: pixelUrl,
         });
 
-        mutateStore(({ followUpLogs, proposals, notifications }) => {
-          followUpLogs.push({
-            id: crypto.randomUUID(),
-            proposalId: proposal.id,
-            sequenceId: sequence.id,
-            sequenceStep: sequence.sequenceOrder,
-            triggerEvent: trigger.event,
-            subject,
-            bodyHtml,
-            sentAt: new Date().toISOString(),
-            resendEmailId: emailResult.id,
-          });
-
-          const pIdx = proposals.findIndex((p) => p.id === proposal.id);
-          if (pIdx !== -1) {
-            proposals[pIdx].followUpCount += 1;
-            proposals[pIdx].updatedAt = new Date().toISOString();
-          }
-
-          notifications.push({
-            id: crypto.randomUUID(),
-            companyId: proposal.companyId,
-            proposalId: proposal.id,
-            type: "follow_up",
-            title: `${sequence.name} sent`,
-            message: `Follow-up sent to ${prospect.businessName}`,
-            read: false,
-            createdAt: new Date().toISOString(),
-          });
+        await appendFollowUpLog({
+          proposalId: proposal.id,
+          sequenceId: sequence.id,
+          sequenceStep: sequence.sequenceOrder,
+          triggerEvent: trigger.event,
+          subject,
+          bodyHtml,
+          resendEmailId: emailResult.id,
         });
+
+        await createFollowUpNotification(
+          proposal.id,
+          proposal.companyId,
+          `${sequence.name} sent`,
+          `Follow-up sent to ${prospect.businessName}`
+        );
 
         results.push({ proposalId: proposal.id, sequence: trigger.event, sent: true });
         sentThisRun = true;
@@ -164,7 +156,7 @@ export async function runFollowUpEngine() {
   return results;
 }
 
-export function sendProposalEmail(
+export async function sendProposalEmail(
   proposalId: string,
   options: {
     subject?: string;
@@ -174,13 +166,10 @@ export function sendProposalEmail(
     pdfUrl?: string;
   }
 ) {
-  const store = getStore();
-  const proposal = store.proposals.find((p) => p.id === proposalId);
-  if (!proposal) throw new Error("Proposal not found");
+  const data = await getProposalById(proposalId);
+  if (!data) throw new Error("Proposal not found");
 
-  const prospect = store.prospects.find((p) => p.id === proposal.prospectId);
-  if (!prospect) throw new Error("Prospect not found");
-
+  const { proposal, prospect, company } = data;
   const proposalUrl = `${APP_URL}/p/${proposal.trackingToken}`;
   const pixelUrl = `${APP_URL}/api/track/email?token=${proposal.trackingToken}`;
   const pdfDownloadUrl =
@@ -201,22 +190,15 @@ export function sendProposalEmail(
     bodyHtml += `<p><a href="${pdfDownloadUrl}">Download PDF Proposal</a></p>`;
   }
 
-  return sendEmail({
+  const result = await sendEmail({
     to: options.to ?? prospect.email,
     subject,
     html: bodyHtml,
-    from: store.company.smtpFromEmail,
-    fromName: store.company.smtpFromName,
+    from: company.smtpFromEmail,
+    fromName: company.smtpFromName,
     trackingPixelUrl: pixelUrl,
-  }).then((result) => {
-    mutateStore(({ proposals }) => {
-      const idx = proposals.findIndex((p) => p.id === proposalId);
-      if (idx !== -1) {
-        proposals[idx].status = "sent";
-        proposals[idx].sentAt = new Date().toISOString();
-        proposals[idx].updatedAt = new Date().toISOString();
-      }
-    });
-    return result;
   });
+
+  await markProposalSent(proposalId);
+  return result;
 }

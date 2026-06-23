@@ -5,13 +5,15 @@ import { buildProposalEmailHtml } from "@/lib/services/proposals/document";
 import { buildEmailSubject } from "@/lib/services/email/resend";
 import { requireApiAuth } from "@/lib/auth/api";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(request: Request, { params }: { params: { id: string } }) {
   try {
     const auth = await requireApiAuth();
     if (auth instanceof NextResponse) return auth;
 
     const body = await request.json().catch(() => ({}));
-    const data = getProposalById(params.id);
+    const data = await getProposalById(params.id);
 
     if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
 

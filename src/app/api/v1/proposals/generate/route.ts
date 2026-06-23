@@ -12,6 +12,8 @@ import {
 } from "@/lib/services/proposals/repository";
 import { requireApiAuth } from "@/lib/auth/api";
 
+export const dynamic = "force-dynamic";
+
 const generateSchema = intakeFormSchema.extend({
   prospectId: z.string().uuid().optional(),
 });
@@ -33,8 +35,8 @@ export async function POST(request: Request) {
 
     const { prospectId, ...intakeData } = parsed.data;
     const intake = intakeData;
-    const pricing = pricingFromIntake(intake);
-    const company = getCompany();
+    const pricing = await pricingFromIntake(intake);
+    const company = await getCompany();
 
     const content = await generateProposalContent(
       {
@@ -59,8 +61,8 @@ export async function POST(request: Request) {
     };
 
     const result = prospectId
-      ? createProposalFromExistingProspect(prospectId, intake, content, pricingPayload)
-      : createProposalFromIntake(intake, content, pricingPayload);
+      ? await createProposalFromExistingProspect(prospectId, intake, content, pricingPayload)
+      : await createProposalFromIntake(intake, content, pricingPayload);
 
     if (!result) {
       return NextResponse.json({ error: "Prospect not found" }, { status: 404 });
@@ -74,7 +76,7 @@ export async function POST(request: Request) {
       const pdfResult = await generateProposalPdf(company, prospect, proposal);
       if (pdfResult) {
         pdfUrl = pdfResult.publicUrl;
-        updateProposal(proposal.id, { pdfUrl: pdfResult.publicUrl });
+        await updateProposal(proposal.id, { pdfUrl: pdfResult.publicUrl });
       }
     } catch (err) {
       console.warn("[proposals/generate] PDF generation skipped:", err);

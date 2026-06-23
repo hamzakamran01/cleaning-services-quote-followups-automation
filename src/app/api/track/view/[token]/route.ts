@@ -3,14 +3,16 @@ import { getProposalByToken, recordTrackingEvent } from "@/lib/services/proposal
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request, { params }: { params: { token: string } }) {
-  const data = getProposalByToken(params.token);
+  const data = await getProposalByToken(params.token);
   if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const userAgent = request.headers.get("user-agent") ?? undefined;
   const deviceType = /mobile|android|iphone/i.test(userAgent ?? "") ? "mobile" : "desktop";
 
-  recordTrackingEvent(data.proposal.id, "proposal_viewed", {
+  await recordTrackingEvent(data.proposal.id, "proposal_viewed", {
     userAgent,
     deviceType,
   });
