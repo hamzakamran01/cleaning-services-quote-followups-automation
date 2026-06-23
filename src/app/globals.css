@@ -41,6 +41,8 @@ body {
 }
 
 @layer components {
+
+  /* ── App Shell ── */
   .app-shell-bg {
     background-color: var(--background);
     background-image:
@@ -48,6 +50,7 @@ body {
       radial-gradient(ellipse 60% 40% at 100% 0%, rgb(5 150 105 / 0.04), transparent);
   }
 
+  /* ── Glass / Elevated ── */
   .glass-panel {
     @apply border border-white/60 bg-white/80 backdrop-blur-xl;
     box-shadow: var(--shadow-md);
@@ -62,11 +65,13 @@ body {
     box-shadow: var(--shadow-md);
   }
 
+  /* ── Typography helpers ── */
   .gradient-text {
     @apply bg-clip-text text-transparent;
     background-image: var(--gradient-primary);
   }
 
+  /* ── Sidebar nav ── */
   .nav-item-active {
     @apply relative bg-brand-primary/[0.08] text-brand-primary;
   }
@@ -76,6 +81,7 @@ body {
     @apply absolute left-0 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-brand-primary;
   }
 
+  /* ── Legacy stat-card ── */
   .stat-card {
     @apply relative overflow-hidden rounded-2xl border border-brand-border/80 bg-white p-5;
     box-shadow: var(--shadow-sm);
@@ -91,8 +97,105 @@ body {
     @apply opacity-100;
   }
 
+  /* ── METRIC CARD (enterprise KPI hero) ── */
+  .metric-card {
+    @apply relative overflow-hidden rounded-2xl border border-brand-border/70 bg-white p-6 transition-all duration-300;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .metric-card:hover {
+    @apply -translate-y-0.5;
+    box-shadow: var(--shadow-lg);
+  }
+
+  .metric-card-accent-bar {
+    @apply absolute top-0 left-0 right-0 h-0.5 rounded-t-2xl;
+  }
+
+  .metric-card-icon-wrap {
+    @apply flex h-11 w-11 items-center justify-center rounded-xl;
+  }
+
+  .metric-value {
+    @apply text-3xl font-black tracking-tight text-brand-text;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .metric-label {
+    @apply text-xs font-semibold uppercase tracking-widest text-brand-muted;
+  }
+
+  .metric-subtext {
+    @apply text-sm text-brand-muted;
+  }
+
+  /* ── Trend badges ── */
+  .trend-up {
+    @apply inline-flex items-center gap-0.5 rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-700;
+  }
+
+  .trend-down {
+    @apply inline-flex items-center gap-0.5 rounded-full bg-red-50 px-2 py-0.5 text-xs font-semibold text-red-600;
+  }
+
+  .trend-neutral {
+    @apply inline-flex items-center gap-0.5 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-500;
+  }
+
+  /* ── Pipeline progress bar ── */
+  .pipeline-bar-track {
+    @apply h-1.5 w-full rounded-full bg-slate-100;
+  }
+
+  .pipeline-bar-fill {
+    @apply h-full rounded-full transition-all duration-700;
+  }
+
+  /* ── Avatar chip ── */
+  .avatar-chip {
+    @apply flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white;
+  }
+
+  /* ── Live pulse indicator ── */
+  .pulse-dot {
+    @apply relative flex h-2 w-2;
+  }
+
+  .pulse-dot::before {
+    content: "";
+    @apply absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75;
+  }
+
+  .pulse-dot::after {
+    content: "";
+    @apply relative inline-flex h-2 w-2 rounded-full bg-emerald-500;
+  }
+
+  /* ── Activity timeline ── */
+  .timeline-line {
+    @apply absolute left-[17px] top-10 bottom-0 w-px bg-gradient-to-b from-slate-200 to-transparent;
+  }
+
+  .timeline-node {
+    @apply flex h-9 w-9 shrink-0 items-center justify-center rounded-full ring-4 ring-white;
+  }
+
+  /* ── Urgency pills ── */
+  .urgency-none {
+    @apply inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-500;
+  }
+
+  .urgency-low {
+    @apply inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-xs font-medium text-amber-700;
+  }
+
+  .urgency-high {
+    @apply inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-red-700;
+  }
+
+  /* ── Kanban ── */
   .kanban-column {
-    @apply flex min-w-[260px] flex-1 flex-col rounded-2xl border border-brand-border/60 bg-slate-50/50;
+    @apply flex w-[340px] shrink-0 flex-col overflow-hidden rounded-2xl border border-brand-border/80 bg-slate-50/40;
     box-shadow: var(--shadow-sm);
   }
 
@@ -102,7 +205,7 @@ body {
   }
 
   .kanban-card:hover {
-    @apply -translate-y-0.5 border-brand-primary/20;
+    @apply -translate-y-0.5 border-brand-primary/30;
     box-shadow: var(--shadow-md);
   }
 
@@ -111,6 +214,11 @@ body {
     box-shadow: var(--shadow-xl);
   }
 
+  .kanban-drop-active {
+    @apply border-brand-primary bg-brand-primary/[0.04] ring-4 ring-brand-primary/10;
+  }
+
+  /* ── Data table ── */
   .data-table {
     @apply w-full text-sm;
   }
@@ -131,18 +239,27 @@ body {
     @apply px-4 py-3.5;
   }
 
+  /* ── Section title ── */
   .page-section-title {
     @apply text-lg font-semibold tracking-tight text-brand-text;
   }
 
+  /* ── View toggle ── */
   .view-toggle {
     @apply inline-flex rounded-xl border border-brand-border/80 bg-white p-1;
     box-shadow: var(--shadow-sm);
   }
 
+  /* ── Skeleton shimmer ── */
   .skeleton-shimmer {
     @apply animate-pulse bg-gradient-to-r from-slate-100 via-slate-200/80 to-slate-100 bg-[length:200%_100%];
     animation: shimmer 1.5s ease-in-out infinite;
+  }
+
+  /* ── Command bar ── */
+  .command-bar {
+    @apply sticky top-0 z-20 flex flex-wrap items-center justify-between gap-3 border-b border-brand-border/60 bg-white/90 px-6 py-3 backdrop-blur-lg;
+    box-shadow: 0 1px 0 0 rgb(15 23 42 / 0.04);
   }
 }
 
@@ -166,6 +283,7 @@ body {
   0% {
     background-position: 200% 0;
   }
+
   100% {
     background-position: -200% 0;
   }
@@ -176,6 +294,7 @@ body {
     opacity: 0;
     transform: translateY(8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -187,9 +306,20 @@ body {
     opacity: 0;
     transform: translateX(12px);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
+  }
+}
+
+@keyframes bar-grow {
+  from {
+    width: 0%;
+  }
+
+  to {
+    width: var(--bar-target, 100%);
   }
 }
 
@@ -199,4 +329,8 @@ body {
 
 .animate-slide-in {
   animation: slide-in-right 0.35s ease-out forwards;
+}
+
+.animate-bar-grow {
+  animation: bar-grow 0.8s cubic-bezier(0.22, 1, 0.36, 1) forwards;
 }

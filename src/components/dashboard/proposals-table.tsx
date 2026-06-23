@@ -15,7 +15,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowDown, ArrowUp, CheckCircle, XCircle } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  CheckCircle,
+  ExternalLink,
+  Search,
+  XCircle,
+} from "lucide-react";
 import { toast } from "sonner";
 
 interface ProposalsTableProps {
@@ -25,13 +32,36 @@ interface ProposalsTableProps {
 
 type SortKey = "companyName" | "monthlyPrice" | "sentAt" | "lastActivity" | "followUpCount";
 
+const avatarColors = [
+  "bg-blue-500", "bg-violet-500", "bg-emerald-500",
+  "bg-amber-500", "bg-rose-500", "bg-indigo-500",
+  "bg-teal-500", "bg-orange-500",
+];
+
+function getAvatarColor(name: string) {
+  let hash = 0;
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
+  return avatarColors[Math.abs(hash) % avatarColors.length];
+}
+
+function getInitials(name: string) {
+  return name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
+}
+
 function getStatusBadge(status: string) {
   const config = PROPOSAL_STATUSES.find((s) => s.value === status);
   return (
-    <Badge className={config?.color ?? "bg-slate-100 text-slate-700"}>
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${config?.color ?? "bg-slate-100 text-slate-700"}`}>
+      <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
       {config?.label ?? status}
-    </Badge>
+    </span>
   );
+}
+
+function getFollowUpPill(count: number) {
+  if (count === 0) return <span className="urgency-none">—</span>;
+  if (count <= 2) return <span className="urgency-low">{count}×</span>;
+  return <span className="urgency-high">{count}×</span>;
 }
 
 export function ProposalsTable({ proposals, onRefresh }: ProposalsTableProps) {
@@ -74,30 +104,45 @@ export function ProposalsTable({ proposals, onRefresh }: ProposalsTableProps) {
       body: JSON.stringify({ status }),
     });
     if (res.ok) {
-      toast.success(status === "won" ? "Marked as Won" : "Marked as Lost");
+      toast.success(status === "won" ? "🏆 Marked as Won" : "Marked as Lost");
       onRefresh?.();
     }
   }
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) setSortAsc(!sortAsc);
-    else {
-      setSortKey(key);
-      setSortAsc(false);
-    }
+    else { setSortKey(key); setSortAsc(false); }
   }
 
   const SortIcon = sortAsc ? ArrowUp : ArrowDown;
 
+  function SortBtn({ label, k }: { label: string; k: SortKey }) {
+    return (
+      <button
+        type="button"
+        className={`flex items-center gap-1 transition-colors hover:text-brand-primary ${sortKey === k ? "font-bold text-brand-primary" : ""
+          }`}
+        onClick={() => toggleSort(k)}
+      >
+        {label}
+        {sortKey === k && <SortIcon className="h-3 w-3" />}
+      </button>
+    );
+  }
+
   return (
     <div className="space-y-4">
+      {/* Filter / search bar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <Input
-          placeholder="Search company, contact, proposal #..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="max-w-sm"
-        />
+        <div className="relative max-w-sm flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-muted" />
+          <Input
+            placeholder="Search company, contact, proposal #…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Filter status" />
@@ -109,97 +154,116 @@ export function ProposalsTable({ proposals, onRefresh }: ProposalsTableProps) {
             ))}
           </SelectContent>
         </Select>
-        <span className="text-sm text-brand-muted">{filtered.length} proposals</span>
+        <div className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1">
+          <span className="text-xs font-semibold text-brand-muted">{filtered.length}</span>
+          <span className="text-xs text-brand-muted">proposals</span>
+        </div>
       </div>
 
-      <div className="overflow-x-auto rounded-2xl border border-brand-border/80 bg-white shadow-soft">
+      {/* Table */}
+      <div className="overflow-x-auto rounded-2xl border border-brand-border/80 bg-white" style={{ boxShadow: "var(--shadow-sm)" }}>
         <table className="data-table">
           <thead>
             <tr>
-              <th className="px-4 py-3 font-medium text-brand-muted">
-                <button type="button" className="flex items-center gap-1" onClick={() => toggleSort("companyName")}>
-                  Company {sortKey === "companyName" && <SortIcon className="h-3 w-3" />}
-                </button>
-              </th>
-              <th className="px-4 py-3 font-medium text-brand-muted">Proposal #</th>
-              <th className="px-4 py-3 font-medium text-brand-muted">
-                <button type="button" className="flex items-center gap-1" onClick={() => toggleSort("monthlyPrice")}>
-                  Monthly {sortKey === "monthlyPrice" && <SortIcon className="h-3 w-3" />}
-                </button>
-              </th>
-              <th className="px-4 py-3 font-medium text-brand-muted">Annual</th>
-              <th className="px-4 py-3 font-medium text-brand-muted">Status</th>
-              <th className="px-4 py-3 font-medium text-brand-muted">
-                <button type="button" className="flex items-center gap-1" onClick={() => toggleSort("sentAt")}>
-                  Sent {sortKey === "sentAt" && <SortIcon className="h-3 w-3" />}
-                </button>
-              </th>
-              <th className="px-4 py-3 font-medium text-brand-muted">
-                <button type="button" className="flex items-center gap-1" onClick={() => toggleSort("lastActivity")}>
-                  Last Activity {sortKey === "lastActivity" && <SortIcon className="h-3 w-3" />}
-                </button>
-              </th>
-              <th className="px-4 py-3 font-medium text-brand-muted">
-                <button type="button" className="flex items-center gap-1" onClick={() => toggleSort("followUpCount")}>
-                  F/U # {sortKey === "followUpCount" && <SortIcon className="h-3 w-3" />}
-                </button>
-              </th>
-              <th className="px-4 py-3 font-medium text-brand-muted">Next Action</th>
-              <th className="px-4 py-3 font-medium text-brand-muted">Actions</th>
+              <th><SortBtn label="Company" k="companyName" /></th>
+              <th>Proposal #</th>
+              <th><SortBtn label="Monthly / Annual" k="monthlyPrice" /></th>
+              <th>Status</th>
+              <th><SortBtn label="Sent" k="sentAt" /></th>
+              <th><SortBtn label="Last Activity" k="lastActivity" /></th>
+              <th><SortBtn label="F/U" k="followUpCount" /></th>
+              <th>Next Action</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filtered.map((p) => (
-              <tr key={p.id} className="group">
-                <td className="px-4 py-3">
-                  <div>
-                    <p className="font-medium text-brand-text">{p.companyName}</p>
-                    <p className="text-xs text-brand-muted">{p.contactName}</p>
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-brand-muted">{p.proposalNumber}</td>
-                <td className="px-4 py-3 font-medium">{formatCurrency(p.monthlyPrice)}</td>
-                <td className="px-4 py-3 text-brand-muted">{formatCurrency(p.annualPrice)}</td>
-                <td className="px-4 py-3">{getStatusBadge(p.status)}</td>
-                <td className="px-4 py-3 text-brand-muted">
-                  {p.sentAt ? formatRelativeTime(p.sentAt) : "—"}
-                </td>
-                <td className="px-4 py-3 text-brand-muted">
-                  {p.lastActivity ? formatRelativeTime(p.lastActivity) : "—"}
-                </td>
-                <td className="px-4 py-3 text-center text-brand-muted">{p.followUpCount}</td>
-                <td className="px-4 py-3 text-xs text-brand-muted">{p.nextAction ?? "—"}</td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="sm" asChild>
-                      <Link href={`/proposals/${p.id}`}>View</Link>
-                    </Button>
-                    {!["won", "lost", "expired"].includes(p.status) && (
-                      <>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-emerald-600"
-                          onClick={() => handleStatus(p.id, "won")}
-                          title="Mark Won"
-                        >
-                          <CheckCircle className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="text-red-600"
-                          onClick={() => handleStatus(p.id, "lost")}
-                          title="Mark Lost"
-                        >
-                          <XCircle className="h-4 w-4" />
-                        </Button>
-                      </>
+            {filtered.map((p) => {
+              const initials = getInitials(p.companyName);
+              const avatarColor = getAvatarColor(p.companyName);
+              return (
+                <tr key={p.id} className="group">
+                  {/* Company + avatar */}
+                  <td>
+                    <div className="flex items-center gap-3">
+                      <div className={`avatar-chip ${avatarColor}`}>{initials}</div>
+                      <div>
+                        <p className="font-semibold text-brand-text">{p.companyName}</p>
+                        <p className="text-xs text-brand-muted">{p.contactName}</p>
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* Proposal # */}
+                  <td>
+                    <span className="rounded-md bg-slate-50 px-2 py-1 font-mono text-xs text-brand-muted">
+                      {p.proposalNumber}
+                    </span>
+                  </td>
+
+                  {/* Monthly / Annual */}
+                  <td>
+                    <p className="font-bold text-brand-text">{formatCurrency(p.monthlyPrice)}<span className="ml-0.5 text-xs font-normal text-brand-muted">/mo</span></p>
+                    <p className="text-xs text-brand-muted">{formatCurrency(p.annualPrice)}/yr</p>
+                  </td>
+
+                  {/* Status */}
+                  <td>{getStatusBadge(p.status)}</td>
+
+                  {/* Sent at */}
+                  <td className="text-brand-muted">{p.sentAt ? formatRelativeTime(p.sentAt) : "—"}</td>
+
+                  {/* Last activity */}
+                  <td className="text-brand-muted">{p.lastActivity ? formatRelativeTime(p.lastActivity) : "—"}</td>
+
+                  {/* Follow-ups urgency */}
+                  <td>{getFollowUpPill(p.followUpCount ?? 0)}</td>
+
+                  {/* Next action */}
+                  <td>
+                    {p.nextAction ? (
+                      <span className="inline-flex rounded-full bg-brand-primary/[0.07] px-2.5 py-1 text-xs font-medium text-brand-primary">
+                        {p.nextAction}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-brand-muted">—</span>
                     )}
-                  </div>
-                </td>
-              </tr>
-            ))}
+                  </td>
+
+                  {/* Actions — revealed on row hover */}
+                  <td>
+                    <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                      <Button variant="ghost" size="sm" asChild title="View proposal">
+                        <Link href={`/proposals/${p.id}`}>
+                          <ExternalLink className="h-4 w-4" />
+                        </Link>
+                      </Button>
+                      {!["won", "lost", "expired"].includes(p.status) && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-emerald-600 hover:bg-emerald-50"
+                            onClick={() => handleStatus(p.id, "won")}
+                            title="Mark Won"
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-500 hover:bg-red-50"
+                            onClick={() => handleStatus(p.id, "lost")}
+                            title="Mark Lost"
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </Button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
