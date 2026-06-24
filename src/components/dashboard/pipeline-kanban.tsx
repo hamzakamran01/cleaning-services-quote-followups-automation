@@ -126,6 +126,7 @@ export function PipelineKanban({ columns, proposals, onStatusChange }: PipelineK
                               ref={dragProvided.innerRef}
                               {...dragProvided.draggableProps}
                               {...dragProvided.dragHandleProps}
+                              style={dragProvided.draggableProps.style as React.CSSProperties}
                               className={cn(
                                 "rounded-lg border border-black/[0.08] bg-white p-4 transition-all duration-150 hover:-translate-y-0.5 hover:shadow-elevated",
                                 p.status === "hot_lead" && "animate-hot-glow",
