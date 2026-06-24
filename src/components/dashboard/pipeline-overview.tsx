@@ -85,7 +85,7 @@ export function PipelineOverview({ columns }: PipelineOverviewProps) {
   const totalValue = columns.reduce((sum, c) => sum + c.value, 0);
 
   return (
-    <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {columns.map((col) => {
         const meta = colMeta[col.status] ?? colMeta.draft;
         const Icon = meta.icon;

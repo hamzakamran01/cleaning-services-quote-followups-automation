@@ -73,7 +73,7 @@ export function PipelineKanban({ columns, proposals, onStatusChange }: PipelineK
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="flex gap-4 overflow-x-auto pb-2 scrollbar-thin">
+      <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-slate-300 hover:scrollbar-thumb-slate-400 scrollbar-track-transparent h-[82vh] min-h-[580px] transition-all">
         {columns
           .filter((col) => col.status !== "lost")
           .map((col) => {
@@ -85,11 +85,11 @@ export function PipelineKanban({ columns, proposals, onStatusChange }: PipelineK
             return (
               <div
                 key={col.status}
-                className="flex w-[300px] min-w-[300px] shrink-0 flex-col"
+                className="flex w-[300px] min-w-[300px] shrink-0 flex-col h-full"
               >
                 {/* Column header */}
                 <div
-                  className="mb-3 flex items-center justify-between border-l-[3px] pl-3"
+                  className="mb-3 flex items-center justify-between border-l-[3px] pl-3 shrink-0"
                   style={{ borderColor: accent }}
                 >
                   <div className="flex items-center gap-2">
@@ -110,7 +110,7 @@ export function PipelineKanban({ columns, proposals, onStatusChange }: PipelineK
                       ref={provided.innerRef}
                       {...provided.droppableProps}
                       className={cn(
-                        "flex min-h-[200px] flex-1 flex-col gap-3 rounded-lg p-1 transition-colors",
+                        "flex flex-1 flex-col gap-3 rounded-lg p-1 transition-colors overflow-y-auto scrollbar-thin overflow-x-hidden min-h-0",
                         snapshot.isDraggingOver && "bg-[#00C5A1]/5"
                       )}
                     >
