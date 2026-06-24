@@ -1,0 +1,326 @@
+This is CleanProposal AI — a sales automation tool built specifically for commercial
+cleaning company owners. The user is a cleaning business owner (Sarah Chen, Sales Owner).
+Their world is: clean white spaces, precision, reliability, the satisfaction of a
+perfectly spotless surface. The visual language should reflect that world.
+
+Design identity:
+- Color system: Warm near-white base (#F8F7F4), deep slate primary (#1A1D23),
+  electric teal accent (#00C5A1), warm amber for hot/urgency signals (#F59E0B),
+  emerald for wins/success (#10B981), soft rose for warnings (#F43F5E).
+- Typography: Plus Jakarta Sans for all headings and display numbers (bold, tight
+  letter-spacing). Inter for all body text, labels, table cells.
+- Aesthetic: Premium B2B SaaS. Think Linear meets Stripe. Clean surfaces, generous
+  whitespace, subtle borders (1px, 8% opacity). No rounded-everything — cards use
+  8px radius, inputs use 6px, pills use 999px. Shadows are paper-thin (0 1px 3px
+  rgba(0,0,0,0.06)).
+- Micro-interactions: Framer Motion for page transitions (fade + 4px Y shift, 200ms),
+  card hover (shadow lift), kanban drag-drop, stat counter animations on mount.
+- Status color system (apply consistently everywhere):
+    Draft     → slate bg  (#F1F1F0), slate text (#64748B)
+    Sent      → blue bg   (#EFF6FF), blue text  (#3B82F6)
+    Opened    → purple bg (#F5F3FF), purple text (#7C3AED)
+    Hot Lead  → amber bg  (#FFFBEB), amber text  (#D97706) + 🔥 icon
+    Won       → emerald bg (#F0FDF4), emerald text (#059669)
+    Lost      → rose bg   (#FFF1F2), rose text   (#F43F5E)
+
+Create a file at lib/design-tokens.ts that exports a complete design token system.
+Include:
+
+Colors:
+  background: { primary: '#F8F7F4', surface: '#FFFFFF', elevated: '#FFFFFF' }
+  brand: { teal: '#00C5A1', tealLight: '#E6FAF6', tealDark: '#009980' }
+  slate: { 900: '#1A1D23', 700: '#334155', 500: '#64748B', 300: '#CBD5E1', 100: '#F1F5F9' }
+  amber: { DEFAULT: '#F59E0B', light: '#FFFBEB', dark: '#D97706' }
+  emerald: { DEFAULT: '#10B981', light: '#F0FDF4', dark: '#059669' }
+  rose: { DEFAULT: '#F43F5E', light: '#FFF1F2' }
+  blue: { DEFAULT: '#3B82F6', light: '#EFF6FF' }
+  purple: { DEFAULT: '#7C3AED', light: '#F5F3FF' }
+
+Status map (export as STATUS_CONFIG):
+  Draft:    { bg: '#F1F1F0', text: '#64748B', dot: '#94A3B8' }
+  Sent:     { bg: '#EFF6FF', text: '#3B82F6', dot: '#3B82F6' }
+  Opened:   { bg: '#F5F3FF', text: '#7C3AED', dot: '#7C3AED' }
+  'Hot Lead': { bg: '#FFFBEB', text: '#D97706', dot: '#F59E0B' }
+  Won:      { bg: '#F0FDF4', text: '#059669', dot: '#10B981' }
+  Lost:     { bg: '#FFF1F2', text: '#F43F5E', dot: '#F43F5E' }
+
+Typography scale:
+  display: 'Plus Jakarta Sans', weights 700/800, letter-spacing -0.03em
+  body: 'Inter', weights 400/500/600
+  mono: 'JetBrains Mono' (for proposal IDs like CLN-2026-1045)
+
+Spacing: 4px base grid (4, 8, 12, 16, 20, 24, 32, 40, 48, 64)
+Radius: card: 8px, input: 6px, badge: 999px, button: 6px
+Shadow: sm: '0 1px 3px rgba(0,0,0,0.06)', md: '0 4px 16px rgba(0,0,0,0.08)', lg: '0 8px 32px rgba(0,0,0,0.10)'
+
+Redesign the root layout and sidebar navigation. Requirements:
+
+SIDEBAR:
+- Width: 240px, fixed left, full height
+- Background: #1A1D23 (deep slate, not black)
+- Top: Logo area — "CleanProposal" in Plus Jakarta Sans 700, white, with a small
+  sparkle/wand icon in #00C5A1 to its left. Below it: "REVENUE ENGINE" in Inter
+  500, 10px, letter-spacing 0.12em, color #64748B.
+- Nav items: 40px height, 12px horizontal padding, 6px radius.
+  Default: text #94A3B8, icon #64748B (18px Lucide icons).
+  Hover: bg rgba(255,255,255,0.06), text #E2E8F0.
+  Active: bg rgba(0,197,161,0.12), text #00C5A1, icon #00C5A1, left border
+  2px solid #00C5A1.
+- Nav items: Dashboard, Proposals, New Proposal (use Lucide: LayoutDashboard,
+  FileText, PlusCircle, Users, BarChart3, Settings)
+- Bottom of sidebar: User avatar card — small rounded avatar with initials "SC",
+  name "Sarah Chen", role "Sales Owner" in muted text. Subtle top border separator.
+
+TOPBAR (right side, above content):
+- Height: 56px, background #FFFFFF, border-bottom 1px solid rgba(0,0,0,0.06)
+- Left: Page title (dynamic, Plus Jakarta Sans 700, 18px, #1A1D23)
+- Right: notification bell with amber badge count, then "+ New Proposal" button
+  (bg #00C5A1, text white, hover bg #009980, 6px radius, Plus Jakarta Sans 600)
+
+MAIN CONTENT AREA:
+- Background: #F8F7F4
+- Padding: 24px
+- All page transitions: Framer Motion AnimatePresence, each page wrapped in:
+  <motion.div initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.18, ease: 'easeOut' }}>
+
+phase 3
+
+Redesign the Dashboard page completely. It has 3 sections.
+
+SECTION 1 — Stats Row (4 cards):
+Each card: white bg, 8px radius, 1px border rgba(0,0,0,0.07), shadow-sm,
+padding 20px 24px.
+
+Card structure:
+- Top row: label in Inter 500 11px letter-spacing 0.08em UPPERCASE color #64748B,
+  icon on the right (18px, colored per card)
+- Middle: big number in Plus Jakarta Sans 800 32px #1A1D23, animated with
+  Framer Motion useMotionValue + useSpring counting up from 0 on mount
+- Bottom: trend chip — small pill with up arrow, delta text in emerald if positive,
+  rose if negative
+
+Cards:
+  1. PROPOSALS SENT — value: 12 — icon: Send (blue #3B82F6) — trend: "+3 this week" (emerald)
+  2. OPEN RATE — value: 57% — icon: Eye (purple #7C3AED) — trend: "Above average" (emerald)
+  3. CONVERSION — value: 37% — icon: Target (teal #00C5A1) — trend: "+2% vs last mo." (emerald)
+  4. REVENUE WON — value: $8,400 — icon: DollarSign (amber #F59E0B) — trend: "On track" (emerald)
+
+SECTION 2 — Pipeline Kanban:
+Header row: "Pipeline View" title left, toggle buttons (Kanban / Summary) center,
+Refresh + New Proposal buttons right.
+
+Kanban columns (horizontal scroll, each column 300px min-width):
+Column header: icon + stage name + dollar amount in Inter 500 13px #64748B +
+count badge (white bg, slate border, 20px circle).
+Column colors (left border accent on header):
+  Draft: #94A3B8, Sent: #3B82F6, Opened: #7C3AED, Hot Lead: #F59E0B, Won: #10B981
+
+Each kanban card:
+- White bg, 8px radius, 1px border rgba(0,0,0,0.08), padding 16px
+- Top row: company avatar (32px circle, bg derived from company initials using a
+  deterministic color from: teal/blue/purple/amber/emerald/rose, white initials
+  text Inter 600 12px) + company name Inter 600 14px #1A1D23 + status badge
+- Middle: contact name Inter 400 13px #64748B
+- Bottom row: proposal ID in JetBrains Mono 11px #94A3B8 + amount
+  "Plus Jakarta Sans 700 14px #1A1D23"
+- If F/U dot present: small amber dot + "1 F/U" label Inter 500 11px
+- Hover: translate-y -1px, shadow-md transition 150ms
+- Framer Motion layout animation on drag (add drag with @hello-pangea/dnd or
+  dnd-kit for kanban reorder)
+
+SECTION 3 — Bottom Two-Column Row:
+Left card (This Month stats):
+- White bg, 8px radius, padding 20px 24px
+- Each metric row: icon (18px) + label Inter 500 13px #64748B + trend chip
+  (right-aligned) + value Inter 700 16px #1A1D23
+- Below each row: thin progress bar, 4px height, 8px radius
+  - bar bg: #F1F5F9, fill color matching metric semantic (teal/red/teal/teal)
+  - animate width from 0 on mount using Framer Motion
+- Green banner at bottom: "TOTAL PIPELINE VALUE" Inter 600 11px white +
+  "$954,000" Plus Jakarta Sans 800 28px white, bg #059669, 8px radius
+
+Right card (Recent Activity):
+- White bg, 8px radius, padding 20px 24px
+- Header: "Recent Activity" Inter 700 15px + live green dot (pulse animation)
+  + "Live" label
+- Each activity row: hot lead avatar (amber circle, flame icon) + company name
+  Inter 600 14px "viewed your proposal 4x today" Inter 400 13px #64748B
+  + "Hot Lead" amber badge + time "14h ago" Inter 400 12px #94A3B8
+- Pulse animation on live dot: CSS keyframe scale 1→1.4→1, opacity 1→0.4→1,
+  2s infinite
+
+phase 4 
+
+Redesign the All Proposals table page.
+
+PAGE HEADER:
+- "All Proposals" Plus Jakarta Sans 700 22px #1A1D23
+- Subtitle: count badge "38 proposals" — pill bg #F1F5F9, text #64748B Inter 500 13px
+
+FILTER ROW:
+- Search input: 340px wide, 36px height, 6px radius, 1px border #E2E8F0,
+  placeholder "Search company, contact, proposal #..." Inter 400 13px,
+  Lucide Search icon left 14px #94A3B8. Focus: border #00C5A1, ring rgba(0,197,161,0.15)
+- Status dropdown: 160px, same height, Radix dropdown-menu, shows all statuses
+  with colored dots matching STATUS_CONFIG
+- Both sit flush left, 12px gap between
+
+TABLE:
+- White bg, 8px radius, 1px border rgba(0,0,0,0.07), no outer shadow
+- Header row: bg #F8F7F4, 1px border-bottom, Inter 500 11px UPPERCASE
+  letter-spacing 0.08em #94A3B8. Columns: Company | Proposal # | Monthly/Annual
+  | Status | Sent | Last Activity | F/U | Next Action | Actions
+- Row height: 72px (enough for company + contact two-liner)
+- Row hover: bg #F8F7F4 transition 100ms
+- Row divider: 1px border #F1F5F9 (very subtle)
+
+EACH ROW:
+- Company cell: avatar (32px, deterministic color from initials) + company name
+  Inter 600 14px #1A1D23 on top, contact name Inter 400 12px #64748B below
+- Proposal # cell: JetBrains Mono 12px #94A3B8 (CLN-2026-1045 format)
+- Monthly/Annual: "$2,800/mo" Inter 700 14px #1A1D23 + "$33,600/yr" Inter 400
+  12px #94A3B8 below
+- Status badge: pill using STATUS_CONFIG — bg/text/dot consistent
+- Sent / Last Activity: Inter 400 13px #64748B, relative time ("2d ago", "Jun 3")
+- F/U: amber "1x" pill if present, dash if not
+- Next Action: rounded chip bg #F1F5F9 text #334155 Inter 500 12px
+- Actions: icon-only button group (Eye, Edit, MoreHorizontal) — appear on row hover
+
+PAGINATION ROW:
+- Inter 400 13px #64748B "Showing 1–10 of 38"
+- Prev / Next buttons, page number pills
+
+
+phase 5
+
+Redesign the New Proposal creation page.
+
+LAYOUT:
+Two-column: left 60% is the form, right 40% is a live preview card.
+
+LEFT — FORM:
+Section headers in Plus Jakarta Sans 700 15px #1A1D23 with a teal left-border accent (3px, #00C5A1).
+Sections: Client Info | Service Details | Pricing | Notes
+
+All inputs:
+- Height 40px, 6px radius, 1px border #E2E8F0, Inter 400 14px #1A1D23
+- Label: Inter 500 12px #64748B, 6px above input
+- Focus: border-color #00C5A1, box-shadow 0 0 0 3px rgba(0,197,161,0.12)
+- Error: border-color #F43F5E, error text Inter 400 12px #F43F5E below
+
+Pricing section: 
+- Monthly fee input with "$" prefix
+- Auto-calculated annual showing below in Plus Jakarta Sans 700 18px #1A1D23
+
+AI Generate button (prominent):
+- Full-width, bg linear-gradient from #00C5A1 to #009980, white text
+  Plus Jakarta Sans 700 15px, 8px radius, height 44px
+- Shimmer loading animation when generating (CSS keyframe left-to-right sweep)
+- Lucide Sparkles icon left
+
+Action buttons row at bottom:
+- "Save Draft" — outlined, border #E2E8F0, text #334155
+- "Send Proposal" — solid #00C5A1
+
+RIGHT — LIVE PREVIEW CARD:
+- Sticky positioned
+- White bg, 8px radius, shadow-lg, padding 24px
+- Header: company name in Plus Jakarta Sans 700 20px
+- Shows a mini-rendered version of the proposal updating in real-time as user types
+- "Preview full proposal" link at bottom opens a modal with the complete PDF-style view
+
+phase 6: 
+Design the Analytics page (currently exists but likely sparse).
+
+LAYOUT: 2-column grid top, then full-width chart below.
+
+TOP METRICS GRID (2x2):
+Same stat card style from Dashboard — white, shadow-sm, count-up animation.
+Cards: Total Pipeline Value | Avg Deal Size | Win Rate | Avg Time to Close
+
+MAIN CHART:
+- Revenue Won Over Time — line chart using recharts
+- Chart bg: white, 8px radius, 24px padding
+- Line color: #00C5A1, strokeWidth 2.5, dot radius 4 filled white stroke teal
+- Grid lines: #F1F5F9 (very subtle), no border on axes
+- Tooltip: white bg, shadow-md, 8px radius, Inter 500 13px
+
+PIPELINE FUNNEL (below chart, full width):
+- Horizontal funnel visualization showing: Sent → Opened → Hot Lead → Won
+- Each stage: bar proportional to count, colored using STATUS_CONFIG colors
+- Stage label + count + conversion % between each stage
+- Built with recharts FunnelChart or custom SVG bars
+
+BOTTOM ROW — Two columns:
+Left: Proposals by Status — recharts PieChart, donut style, center shows total count
+Right: Top Performing Months — recharts BarChart, bars in #00C5A1
+
+phase 7:
+
+Create a shared component library at components/ui/clean/ with these:
+
+1. StatusBadge.tsx — takes status string, renders pill using STATUS_CONFIG,
+   includes colored dot prefix, pill shape (999px radius).
+
+2. CompanyAvatar.tsx — takes company name string, deterministically picks one of 8
+   colors based on first letter charCode % 8, renders 32px (or size prop) circle
+   with initials. Color pool: teal, blue, purple, amber, emerald, rose, slate, orange.
+
+3. ProposalIdChip.tsx — renders "CLN-2026-1045" in JetBrains Mono 11px on #F1F5F9
+   bg, 4px radius, subtle border.
+
+4. StatCard.tsx — reusable card with label, icon, animated number value (Framer Motion
+   useSpring), trend chip, and optional sparkline. Used on Dashboard and Analytics.
+
+5. TrendChip.tsx — small pill showing "↑ +3 this week" or "↓ Below avg". Direction
+   determines color: up = emerald, down = rose, neutral = slate.
+
+6. LiveDot.tsx — pulsing green dot used in Recent Activity header.
+   CSS: scale and opacity keyframe, 2s infinite.
+
+7. SectionHeader.tsx — "SECTION TITLE" in 11px uppercase Inter 500 letter-spacing
+   0.08em #94A3B8, with optional teal left accent border for form sections.
+
+8. LoadingSkeleton.tsx — animated shimmer skeleton for cards and table rows.
+   Use for loading states on all data-fetching components.
+
+Make all components fully typed with TypeScript interfaces and default export.
+
+phase : 8 
+Final polish and animation pass across the entire app:
+
+1. Page transitions: Wrap every page component in a Framer Motion div:
+   initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
+   exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.18, ease: 'easeOut' }}
+   Wrap router outlet in <AnimatePresence mode="wait">.
+
+2. Stat cards: All numeric values use Framer Motion useSpring to animate from 0 to
+   final value on component mount. Duration ~800ms, stiffness 60, damping 15.
+
+3. Progress bars in "This Month" card: animate width from 0 to final % on mount,
+   using Framer Motion with a 300ms delay stagger between each bar.
+
+4. Kanban cards: each card uses Framer Motion layout prop and whileHover:
+   { y: -2, boxShadow: '0 8px 24px rgba(0,0,0,0.10)' } with 150ms transition.
+
+5. Table rows: staggered fade-in on data load. Each row:
+   initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
+   with staggerChildren 0.04s.
+
+6. New Proposal button: whileHover scale 1.02, whileTap scale 0.98.
+
+7. Sidebar nav items: smooth color transitions on hover/active using Tailwind
+   transition-colors duration-150.
+
+8. Hot Lead cards: add a subtle amber glow border animation — CSS keyframe
+   alternating border-color between #F59E0B and #FBBF24, 2s infinite.
+   Only on cards with Hot Lead status.
+
+9. Global focus styles: all interactive elements get
+   focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2
+   Remove default blue browser outline.
+
+10. Scrollbar styling (webkit): thin, #E2E8F0 track, #CBD5E1 thumb, hover #94A3B8.
+    Add to global CSS.
+

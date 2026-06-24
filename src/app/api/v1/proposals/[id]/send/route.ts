@@ -7,7 +7,8 @@ import { requireApiAuth } from "@/lib/auth/api";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const auth = await requireApiAuth();
     if (auth instanceof NextResponse) return auth;

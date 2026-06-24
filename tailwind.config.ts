@@ -1,6 +1,8 @@
 import type { Config } from "tailwindcss";
+import { colors, shadow } from "./src/lib/design-tokens";
 
 const config: Config = {
+  darkMode: ["class"],
   content: [
     "./src/pages/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
@@ -9,43 +11,103 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
+        border: "var(--border)",
+        input: "var(--input)",
+        ring: "var(--ring)",
+        background: "var(--background)",
+        foreground: "var(--foreground)",
+        primary: {
+          DEFAULT: "var(--primary)",
+          foreground: "var(--primary-foreground)",
+        },
+        secondary: {
+          DEFAULT: "var(--secondary)",
+          foreground: "var(--secondary-foreground)",
+        },
+        destructive: {
+          DEFAULT: "var(--destructive)",
+          foreground: "var(--destructive-foreground)",
+        },
+        muted: {
+          DEFAULT: "var(--muted)",
+          foreground: "var(--muted-foreground)",
+        },
+        accent: {
+          DEFAULT: "var(--accent)",
+          foreground: "var(--accent-foreground)",
+        },
+        popover: {
+          DEFAULT: "var(--popover)",
+          foreground: "var(--popover-foreground)",
+        },
+        card: {
+          DEFAULT: "var(--card)",
+          foreground: "var(--card-foreground)",
+        },
+        clean: {
+          bg: colors.background.primary,
+          surface: colors.background.surface,
+          slate: colors.slate,
+          teal: colors.brand.teal,
+          "teal-light": colors.brand.tealLight,
+          "teal-dark": colors.brand.tealDark,
+        },
         brand: {
-          primary: "#1E40AF",
-          "primary-light": "#3B82F6",
-          accent: "#059669",
-          "accent-light": "#10B981",
-          warning: "#D97706",
-          danger: "#DC2626",
-          bg: "#F8FAFC",
-          surface: "#FFFFFF",
-          text: "#0F172A",
-          muted: "#64748B",
+          primary: colors.brand.teal,
+          "primary-light": colors.brand.tealLight,
+          "primary-dark": colors.brand.tealDark,
+          accent: colors.emerald.DEFAULT,
+          "accent-light": colors.emerald.light,
+          warning: colors.amber.DEFAULT,
+          danger: colors.rose.DEFAULT,
+          bg: colors.background.primary,
+          surface: colors.background.surface,
+          text: colors.slate[900],
+          muted: colors.slate[500],
           border: "#E2E8F0",
         },
       },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+        card: "8px",
+        input: "6px",
+        button: "6px",
+      },
       fontFamily: {
-        sans: ["var(--font-inter)", "system-ui", "sans-serif"],
+        sans: ["var(--font-inter)", "Inter", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "Plus Jakarta Sans", "sans-serif"],
+        mono: ["var(--font-mono)", "JetBrains Mono", "monospace"],
+        heading: ["var(--font-display)", "Plus Jakarta Sans", "sans-serif"],
       },
       boxShadow: {
-        soft: "0 2px 8px -2px rgb(15 23 42 / 0.06), 0 4px 16px -4px rgb(15 23 42 / 0.04)",
-        elevated: "0 4px 6px -1px rgb(15 23 42 / 0.06), 0 10px 24px -4px rgb(15 23 42 / 0.08)",
-        glow: "0 0 0 1px rgb(30 64 175 / 0.08), 0 8px 32px -8px rgb(30 64 175 / 0.2)",
-        "glow-accent": "0 0 0 1px rgb(5 150 105 / 0.08), 0 8px 32px -8px rgb(5 150 105 / 0.15)",
+        soft: shadow.sm,
+        elevated: shadow.md,
+        glow: shadow.lg,
       },
-      borderRadius: {
-        "2xl": "1rem",
-        "3xl": "1.25rem",
+      ringWidth: {
+        3: "3px",
       },
       animation: {
         shimmer: "shimmer 1.5s ease-in-out infinite",
+        "live-pulse": "live-pulse 2s ease-in-out infinite",
+        "hot-glow": "hot-glow 2s ease-in-out infinite",
         "fade-in": "fade-in 0.4s ease-out forwards",
         "slide-in": "slide-in-right 0.35s ease-out forwards",
-        "pulse-soft": "pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite",
       },
       keyframes: {
         shimmer: {
           "0%": { backgroundPosition: "200% 0" },
           "100%": { backgroundPosition: "-200% 0" },
+        },
+        "live-pulse": {
+          "0%, 100%": { transform: "scale(1)", opacity: "1" },
+          "50%": { transform: "scale(1.4)", opacity: "0.4" },
+        },
+        "hot-glow": {
+          "0%, 100%": { borderColor: "#F59E0B" },
+          "50%": { borderColor: "#FBBF24" },
         },
         "fade-in": {
           from: { opacity: "0", transform: "translateY(8px)" },
@@ -56,13 +118,8 @@ const config: Config = {
           to: { opacity: "1", transform: "translateX(0)" },
         },
       },
-      backgroundImage: {
-        "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
-        "mesh-primary":
-          "radial-gradient(at 40% 20%, rgb(30 64 175 / 0.08) 0px, transparent 50%), radial-gradient(at 80% 0%, rgb(5 150 105 / 0.05) 0px, transparent 50%)",
-      },
     },
   },
-  plugins: [],
+  plugins: [require("tailwindcss-animate")],
 };
 export default config;

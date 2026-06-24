@@ -3,7 +3,8 @@ import { getProposalById, resendProposal } from "@/lib/services/proposals/reposi
 
 export const dynamic = "force-dynamic";
 
-export async function POST(_request: Request, { params }: { params: { id: string } }) {
+export async function POST(_request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const existing = await getProposalById(params.id);
   if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 

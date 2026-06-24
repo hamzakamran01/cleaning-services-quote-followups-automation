@@ -11,7 +11,8 @@ const updateSchema = z.object({
   isActive: z.boolean().optional(),
 });
 
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   try {
     const body = await request.json();
     const parsed = updateSchema.parse(body);

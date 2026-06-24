@@ -6,6 +6,7 @@ interface SendEmailOptions {
   fromName?: string;
   replyTo?: string;
   trackingPixelUrl?: string;
+  attachments?: Array<{ filename: string; content: string; content_type: string }>;
 }
 
 export async function sendEmail(options: SendEmailOptions): Promise<{ id: string; success: boolean }> {
@@ -18,8 +19,20 @@ export async function sendEmail(options: SendEmailOptions): Promise<{ id: string
   }
 
   if (!process.env.RESEND_API_KEY) {
-    console.log("[email:demo]", { to: options.to, subject: options.subject });
+    console.log("[email:demo]", { to: options.to, subject: options.subject, attachments: options.attachments?.length });
     return { id: `demo-${Date.now()}`, success: true };
+  }
+
+  const payload: any = {
+    from: `${fromName} <${fromEmail}>`,
+    to: [options.to],
+    subject: options.subject,
+    html,
+    reply_to: options.replyTo,
+  };
+
+  if (options.attachments && options.attachments.length > 0) {
+    payload.attachments = options.attachments;
   }
 
   const res = await fetch("https://api.resend.com/emails", {
@@ -28,13 +41,7 @@ export async function sendEmail(options: SendEmailOptions): Promise<{ id: string
       Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      from: `${fromName} <${fromEmail}>`,
-      to: [options.to],
-      subject: options.subject,
-      html,
-      reply_to: options.replyTo,
-    }),
+    body: JSON.stringify(payload),
   });
 
   if (!res.ok) {

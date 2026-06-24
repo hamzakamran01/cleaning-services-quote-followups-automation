@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { intakeFormSchema } from "@/lib/validations/intake";
-import { generateProposalContent } from "@/lib/services/ai/claude";
+import { generateProposalContent } from "@/lib/services/ai/openai";
 import { generateProposalPdf } from "@/lib/services/pdf/generator";
 import {
   createProposalFromIntake,
@@ -71,16 +71,11 @@ export async function POST(request: Request) {
     const { proposal, prospect } = result;
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
-    let pdfUrl = `${appUrl}/api/v1/proposals/${proposal.id}/document?format=pdf`;
-    try {
-      const pdfResult = await generateProposalPdf(company, prospect, proposal);
-      if (pdfResult) {
-        pdfUrl = pdfResult.publicUrl;
-        await updateProposal(proposal.id, { pdfUrl: pdfResult.publicUrl });
-      }
-    } catch (err) {
-      console.warn("[proposals/generate] PDF generation skipped:", err);
-    }
+    const pdfUrl = `${appUrl}/api/v1/proposals/${proposal.id}/document?format=pdf`;
+
+    // Enterprise Architecture Note: We intentionally skip executing generateProposalPdf() 
+    // synchronously here. Puppeteer + OpenAI compounding execution time regularly exceeds 
+    // serverless lambda execution limits. PDF is generated lazily on first GET.
 
     return NextResponse.json(
       {

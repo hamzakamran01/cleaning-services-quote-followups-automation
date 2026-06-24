@@ -3,11 +3,12 @@ import { getProposalByToken, recordTrackingEvent } from "@/lib/services/proposal
 import { PublicProposalView } from "@/components/proposals/public-proposal-view";
 
 interface PageProps {
-  params: { token: string };
+  params: Promise<{ token: string }>;
 }
 
 export default async function PublicProposalPage({ params }: PageProps) {
-  const data = await getProposalByToken(params.token);
+  const { token } = await params;
+  const data = await getProposalByToken(token);
   if (!data) notFound();
 
   const { proposal, prospect, company } = data;

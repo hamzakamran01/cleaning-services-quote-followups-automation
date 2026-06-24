@@ -1,4 +1,4 @@
-import { generateFollowUpEmail } from "@/lib/services/ai/claude";
+import { generateFollowUpEmail } from "@/lib/services/ai/openai";
 import { sendEmail } from "@/lib/services/email/resend";
 import {
   listProposals,
@@ -8,6 +8,7 @@ import {
   markProposalSent,
   getProposalById,
 } from "@/lib/services/proposals/repository";
+import { generateProposalPdf, readStoredPdf } from "@/lib/services/pdf/generator";
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -179,24 +180,55 @@ export async function sendProposalEmail(
     options.subject ??
     `Commercial Cleaning Proposal for ${prospect.businessName} — ${prospect.squareFootage.toLocaleString()} sq ft`;
 
-  let bodyHtml =
-    options.bodyHtml ??
-    `<p>Dear ${prospect.fullName},</p>
-     <p>Please review your customized cleaning proposal for <strong>${prospect.businessName}</strong>.</p>
-     <p>Monthly investment: <strong>$${proposal.monthlyPrice.toLocaleString()}</strong></p>
-     <p><a href="${proposalUrl}">View Proposal Online</a></p>`;
+  let bodyHtml = options.bodyHtml;
+  if (!bodyHtml || !bodyHtml.includes("html") && !bodyHtml.includes("<p>")) {
+    // If the frontend sent plaintext, wrap it.
+    const customMessage = bodyHtml ? `<p>${bodyHtml.replace(/\n/g, "<br/>")}</p>` : "";
+    bodyHtml = `
+      <div style="font-family:system-ui,sans-serif;max-width:600px;margin:0 auto;color:#0f172a;">
+        <p>Dear ${prospect.fullName},</p>
+        ${customMessage}
+        <p>Please find your customized cleaning proposal for <strong>${prospect.businessName}</strong> attached or via the link below.</p>
+        <p style="margin:24px 0;">
+          <a href="${proposalUrl}" style="background:#1e40af;color:white;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;display:inline-block;">
+            View Your Proposal Online
+          </a>
+        </p>
+        <p style="color:#64748b;font-size:14px;">If you have any questions, simply reply to this email.</p>
+        <p>Best regards,<br/>${company.name}</p>
+      </div>`;
+  }
 
-  if (options.attachPdf && !bodyHtml.includes(pdfDownloadUrl)) {
-    bodyHtml += `<p><a href="${pdfDownloadUrl}">Download PDF Proposal</a></p>`;
+  const attachments = [];
+
+  if (options.attachPdf) {
+    // Generate or fetch the actual PDF buffer
+    let pdfBuffer = readStoredPdf(proposal.id, proposal.proposalNumber, proposal.version);
+    if (!pdfBuffer) {
+      const result = await generateProposalPdf(company, prospect, proposal);
+      if (result) pdfBuffer = result.buffer;
+    }
+
+    if (pdfBuffer) {
+      attachments.push({
+        filename: `Proposal_${proposal.proposalNumber}_${company.name.replace(/\s+/g, "_")}.pdf`,
+        content: pdfBuffer.toString("base64"),
+        content_type: "application/pdf",
+      });
+    } else if (!bodyHtml.includes("Download PDF")) {
+      // Fallback
+      bodyHtml += `<p><a href="${pdfDownloadUrl}">Download PDF Proposal</a></p>`;
+    }
   }
 
   const result = await sendEmail({
     to: options.to ?? prospect.email,
     subject,
     html: bodyHtml,
-    from: company.smtpFromEmail,
-    fromName: company.smtpFromName,
+    from: process.env.RESEND_FROM_EMAIL ?? company.smtpFromEmail,
+    fromName: process.env.RESEND_FROM_NAME ?? company.smtpFromName,
     trackingPixelUrl: pixelUrl,
+    attachments: attachments.length > 0 ? attachments : undefined,
   });
 
   await markProposalSent(proposalId);

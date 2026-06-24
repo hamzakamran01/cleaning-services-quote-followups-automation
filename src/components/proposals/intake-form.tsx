@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, ArrowRight, Loader2, Sparkles } from "lucide-react";
+import { Loader2, Sparkles } from "lucide-react";
 import {
   CONTRACT_DURATIONS,
   FACILITY_TYPES,
@@ -13,22 +13,17 @@ import {
   SERVICE_TYPES,
   SPECIAL_AREAS,
   VISIT_FREQUENCIES,
+  PROMO_CODES,
+  resolvePromoDiscount,
 } from "@/lib/constants";
 import { calculatePricing, getPriceRange, DEFAULT_PRICING_CONFIG } from "@/lib/pricing/engine";
 import type { PricingConfig } from "@/lib/types/proposal";
 import type { FacilityType, ServiceType, VisitFrequency, ContractDuration } from "@/lib/constants";
-import { PROMO_CODES, resolvePromoDiscount } from "@/lib/constants";
-import {
-  intakeFormSchema,
-  type IntakeFormValues,
-} from "@/lib/validations/intake";
+import { intakeFormSchema, type IntakeFormValues } from "@/lib/validations/intake";
 import { formatCurrency } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import {
   Select,
   SelectContent,
@@ -36,9 +31,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { PricePreview } from "@/components/proposals/price-preview";
-
-const STEPS = ["Client", "Facility", "Services", "Custom"] as const;
+import SectionHeader from "@/components/ui/clean/SectionHeader";
+import { ProposalLivePreview } from "@/components/proposals/proposal-live-preview";
+import { cn } from "@/lib/utils";
 
 const defaultValues: IntakeFormValues = {
   client: { fullName: "", businessName: "", email: "", phone: "", website: "" },
@@ -63,11 +58,15 @@ const defaultValues: IntakeFormValues = {
   customization: { notes: "", source: "", discountPct: 0, promoCode: "" },
 };
 
+const fieldClass =
+  "h-10 rounded-md border border-[#E2E8F0] bg-white text-sm text-[#1A1D23] focus-visible:border-[#00C5A1] focus-visible:ring-[3px] focus-visible:ring-[rgba(0,197,161,0.12)]";
+const labelClass = "mb-1.5 block text-xs font-medium text-[#64748B]";
+const errorClass = "mt-1 text-xs text-[#F43F5E]";
+
 export function IntakeForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const prospectId = searchParams.get("prospect");
-  const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pricingConfig, setPricingConfig] = useState<PricingConfig>(DEFAULT_PRICING_CONFIG);
@@ -101,7 +100,6 @@ export function IntakeForm() {
       setPrefillLoading(false);
       return;
     }
-
     fetch(`/api/v1/prospects/${prospectId}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((data) => {
@@ -180,22 +178,7 @@ export function IntakeForm() {
     return PROMO_CODES[code] ?? { invalid: true };
   }, [values.customization.promoCode]);
 
-  async function validateCurrentStep(): Promise<boolean> {
-    const fields: (keyof IntakeFormValues)[] = ["client", "facility", "services", "customization"];
-    const field = fields[step];
-    return form.trigger(field);
-  }
-
-  async function handleNext() {
-    const valid = await validateCurrentStep();
-    if (valid) setStep((s) => Math.min(s + 1, STEPS.length - 1));
-  }
-
-  function handleBack() {
-    setStep((s) => Math.max(s - 1, 0));
-  }
-
-  async function handleGenerate() {
+  async function handleSubmit(sendAfter = false) {
     const valid = await form.trigger();
     if (!valid) return;
 
@@ -220,7 +203,10 @@ export function IntakeForm() {
       }
 
       const data = await res.json();
-      router.push(`/proposals/${data.proposalId}`);
+      const dest = sendAfter
+        ? `/proposals/${data.proposalId}?send=true`
+        : `/proposals/${data.proposalId}`;
+      router.push(dest);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
@@ -228,364 +214,330 @@ export function IntakeForm() {
     }
   }
 
-  const progress = ((step + 1) / STEPS.length) * 100;
-
   if (prefillLoading) {
     return (
       <div className="flex items-center justify-center py-24">
-        <Loader2 className="h-8 w-8 animate-spin text-brand-primary" />
+        <Loader2 className="h-8 w-8 animate-spin text-[#00C5A1]" />
       </div>
     );
   }
 
   return (
-    <div className="grid gap-8 lg:grid-cols-3">
-      <div className="lg:col-span-2">
-        <Card>
-          <CardHeader className="pb-2">
-            <div className="relative mb-6 flex items-center justify-between">
-              {STEPS.map((label, i) => (
-                <div key={label} className="relative z-10 flex flex-1 flex-col items-center gap-2">
-                  <div
-                    className={`flex h-10 w-10 items-center justify-center rounded-xl text-sm font-bold transition-all duration-300 ${
-                      i < step
-                        ? "bg-brand-accent text-white shadow-glow-accent"
-                        : i === step
-                          ? "bg-brand-primary text-white shadow-glow scale-110"
-                          : "bg-slate-100 text-brand-muted"
-                    }`}
-                  >
-                    {i + 1}
-                  </div>
-                  <span
-                    className={`hidden text-xs font-medium sm:block ${
-                      i <= step ? "text-brand-text" : "text-brand-muted"
-                    }`}
-                  >
-                    {label}
-                  </span>
-                </div>
-              ))}
-              <div className="absolute left-[10%] right-[10%] top-5 -z-0 h-0.5 bg-slate-200" />
-              <div
-                className="absolute left-[10%] top-5 -z-0 h-0.5 bg-brand-primary transition-all duration-500"
-                style={{ width: `${(step / (STEPS.length - 1)) * 80}%` }}
-              />
-            </div>
-            <Progress value={progress} className="h-2 rounded-full" />
-            <CardTitle className="mt-6 text-xl">
-              Step {step + 1}: {STEPS[step]} Information
-            </CardTitle>
-            <CardDescription>
-              {step === 0 && "Who are you quoting?"}
-              {step === 1 && "Tell us about the facility."}
-              {step === 2 && "Configure services and frequency."}
-              {step === 3 && "Add notes and finalize."}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {step === 0 && (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="fullName">Contact Full Name *</Label>
-                  <Input id="fullName" {...form.register("client.fullName")} />
-                  {form.formState.errors.client?.fullName && (
-                    <p className="text-xs text-brand-danger">{form.formState.errors.client.fullName.message}</p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="businessName">Company / Business Name *</Label>
-                  <Input id="businessName" {...form.register("client.businessName")} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email *</Label>
-                  <Input id="email" type="email" {...form.register("client.email")} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone</Label>
-                  <Input id="phone" {...form.register("client.phone")} />
-                </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <Label htmlFor="website">Website</Label>
-                  <Input id="website" placeholder="https://" {...form.register("client.website")} />
-                </div>
-              </div>
-            )}
-
-            {step === 1 && (
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="space-y-2 sm:col-span-2">
-                  <Label>Facility Type *</Label>
-                  <Select
-                    value={values.facility.type}
-                    onValueChange={(v) => form.setValue("facility.type", v, { shouldValidate: true })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {FACILITY_TYPES.map((t) => (
-                        <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                {values.facility.type === "other" && (
-                  <div className="space-y-2 sm:col-span-2">
-                    <Label htmlFor="typeOther">Describe Facility Type</Label>
-                    <Input
-                      id="typeOther"
-                      placeholder="e.g. Data center, co-working space..."
-                      {...form.register("facility.typeOther")}
-                    />
-                  </div>
-                )}
-                <div className="space-y-2">
-                  <Label htmlFor="sqft">Square Footage *</Label>
-                  <Input id="sqft" type="number" {...form.register("facility.squareFootage")} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="floors">Number of Floors</Label>
-                  <Input id="floors" type="number" {...form.register("facility.numFloors")} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="restrooms">Restrooms</Label>
-                  <Input id="restrooms" type="number" {...form.register("facility.numRestrooms")} />
-                </div>
-                <div className="space-y-2">
-                  <Label>Kitchen / Break Room</Label>
-                  <Select
-                    value={values.facility.hasKitchen ? "yes" : "no"}
-                    onValueChange={(v) => form.setValue("facility.hasKitchen", v === "yes")}
-                  >
-                    <SelectTrigger><SelectValue /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="yes">Yes</SelectItem>
-                      <SelectItem value="no">No</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="carpet">Carpet %</Label>
-                  <Input id="carpet" type="number" {...form.register("facility.floorCarpetPct")} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="hardwood">Hardwood %</Label>
-                  <Input id="hardwood" type="number" {...form.register("facility.floorHardwoodPct")} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="tile">Tile / Concrete %</Label>
-                  <Input id="tile" type="number" {...form.register("facility.floorTilePct")} />
-                </div>
-                <div className="space-y-2 sm:col-span-2">
-                  <Label>Special Areas</Label>
-                  <div className="flex flex-wrap gap-2">
-                    {SPECIAL_AREAS.map((area) => {
-                      const selected = values.facility.specialAreas.includes(area);
-                      return (
-                        <button
-                          key={area}
-                          type="button"
-                          onClick={() => {
-                            const next = selected
-                              ? values.facility.specialAreas.filter((a) => a !== area)
-                              : [...values.facility.specialAreas, area];
-                            form.setValue("facility.specialAreas", next);
-                          }}
-                          className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
-                            selected
-                              ? "border-brand-primary bg-brand-primary/10 text-brand-primary"
-                              : "border-brand-border text-brand-muted hover:border-brand-primary/50"
-                          }`}
-                        >
-                          {area}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {step === 2 && (
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <Label>Service Types *</Label>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    {SERVICE_TYPES.map((svc) => {
-                      const checked = values.services.types.includes(svc.value);
-                      return (
-                        <label
-                          key={svc.value}
-                          className={`flex cursor-pointer items-center gap-2 rounded-lg border p-3 text-sm ${
-                            checked ? "border-brand-primary bg-brand-primary/5" : "border-brand-border"
-                          }`}
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            onChange={() => {
-                              const next = checked
-                                ? values.services.types.filter((t) => t !== svc.value)
-                                : [...values.services.types, svc.value];
-                              form.setValue("services.types", next, { shouldValidate: true });
-                            }}
-                            className="rounded border-brand-border"
-                          />
-                          {svc.label}
-                        </label>
-                      );
-                    })}
-                  </div>
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>Visit Frequency</Label>
-                    <Select
-                      value={values.services.visitFrequency}
-                      onValueChange={(v) => form.setValue("services.visitFrequency", v)}
-                    >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {VISIT_FREQUENCIES.map((f) => (
-                          <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Service Time</Label>
-                    <Select
-                      value={values.services.serviceTime}
-                      onValueChange={(v) => form.setValue("services.serviceTime", v)}
-                    >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {SERVICE_TIMES.map((t) => (
-                          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Contract Duration</Label>
-                    <Select
-                      value={values.services.contractDuration}
-                      onValueChange={(v) => form.setValue("services.contractDuration", v)}
-                    >
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {CONTRACT_DURATIONS.map((d) => (
-                          <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="startDate">Service Start Date</Label>
-                    <Input id="startDate" type="date" {...form.register("services.startDate")} />
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {step === 3 && (
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Special Instructions</Label>
-                  <Textarea id="notes" rows={4} {...form.register("customization.notes")} />
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>How did they hear about you?</Label>
-                    <Select
-                      value={values.customization.source ?? ""}
-                      onValueChange={(v) => form.setValue("customization.source", v)}
-                    >
-                      <SelectTrigger><SelectValue placeholder="Select source" /></SelectTrigger>
-                      <SelectContent>
-                        {LEAD_SOURCES.map((s) => (
-                          <SelectItem key={s} value={s}>{s}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="discount">Additional Discount %</Label>
-                    <Input id="discount" type="number" {...form.register("customization.discountPct")} />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="promoCode">Promotional Code</Label>
-                    <Input
-                      id="promoCode"
-                      placeholder="e.g. WELCOME10"
-                      {...form.register("customization.promoCode")}
-                    />
-                    {promoInfo && "invalid" in promoInfo && (
-                      <p className="text-xs text-brand-danger">Invalid promo code</p>
-                    )}
-                    {promoInfo && !("invalid" in promoInfo) && (
-                      <p className="text-xs text-brand-accent">{promoInfo.label}</p>
-                    )}
-                  </div>
-                </div>
-                <p className="text-xs text-brand-muted">
-                  Valid codes: {Object.keys(PROMO_CODES).join(", ")}
-                </p>
-              </div>
-            )}
-
-            {error && (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-                {error}
-              </div>
-            )}
-
-            <div className="flex items-center justify-between pt-4">
-              <Button type="button" variant="outline" onClick={handleBack} disabled={step === 0}>
-                <ArrowLeft className="h-4 w-4" />
-                Back
-              </Button>
-              {step < STEPS.length - 1 ? (
-                <Button type="button" onClick={handleNext}>
-                  Next
-                  <ArrowRight className="h-4 w-4" />
-                </Button>
-              ) : (
-                <Button type="button" onClick={handleGenerate} disabled={submitting}>
-                  {submitting ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Generating...
-                    </>
-                  ) : (
-                    <>
-                      <Sparkles className="h-4 w-4" />
-                      Generate Proposal
-                    </>
-                  )}
-                </Button>
+    <div className="grid gap-8 lg:grid-cols-5">
+      {/* Left — Form (60%) */}
+      <div className="space-y-8 lg:col-span-3">
+        {/* Client Info */}
+        <section className="space-y-4">
+          <SectionHeader title="Client Info" accent />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label htmlFor="fullName" className={labelClass}>Contact Full Name *</Label>
+              <Input id="fullName" className={fieldClass} {...form.register("client.fullName")} />
+              {form.formState.errors.client?.fullName && (
+                <p className={errorClass}>{form.formState.errors.client.fullName.message}</p>
               )}
             </div>
-          </CardContent>
-        </Card>
+            <div>
+              <Label htmlFor="businessName" className={labelClass}>Company / Business Name *</Label>
+              <Input id="businessName" className={fieldClass} {...form.register("client.businessName")} />
+            </div>
+            <div>
+              <Label htmlFor="email" className={labelClass}>Email *</Label>
+              <Input id="email" type="email" className={fieldClass} {...form.register("client.email")} />
+            </div>
+            <div>
+              <Label htmlFor="phone" className={labelClass}>Phone</Label>
+              <Input id="phone" className={fieldClass} {...form.register("client.phone")} />
+            </div>
+            <div className="sm:col-span-2">
+              <Label htmlFor="website" className={labelClass}>Website</Label>
+              <Input id="website" placeholder="https://" className={fieldClass} {...form.register("client.website")} />
+            </div>
+          </div>
+        </section>
+
+        {/* Service Details */}
+        <section className="space-y-4">
+          <SectionHeader title="Service Details" accent />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <Label className={labelClass}>Facility Type *</Label>
+              <Select
+                value={values.facility.type}
+                onValueChange={(v) => form.setValue("facility.type", v, { shouldValidate: true })}
+              >
+                <SelectTrigger className={fieldClass}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {FACILITY_TYPES.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="sqft" className={labelClass}>Square Footage *</Label>
+              <Input id="sqft" type="number" className={fieldClass} {...form.register("facility.squareFootage")} />
+            </div>
+            <div>
+              <Label htmlFor="restrooms" className={labelClass}>Restrooms</Label>
+              <Input id="restrooms" type="number" className={fieldClass} {...form.register("facility.numRestrooms")} />
+            </div>
+            <div>
+              <Label className={labelClass}>Visit Frequency</Label>
+              <Select
+                value={values.services.visitFrequency}
+                onValueChange={(v) => form.setValue("services.visitFrequency", v)}
+              >
+                <SelectTrigger className={fieldClass}><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {VISIT_FREQUENCIES.map((f) => (
+                    <SelectItem key={f.value} value={f.value}>{f.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className={labelClass}>Contract Duration</Label>
+              <Select
+                value={values.services.contractDuration}
+                onValueChange={(v) => form.setValue("services.contractDuration", v)}
+              >
+                <SelectTrigger className={fieldClass}><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {CONTRACT_DURATIONS.map((d) => (
+                    <SelectItem key={d.value} value={d.value}>{d.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div>
+            <Label className={labelClass}>Service Types *</Label>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {SERVICE_TYPES.map((svc) => {
+                const checked = values.services.types.includes(svc.value);
+                return (
+                  <label
+                    key={svc.value}
+                    className={cn(
+                      "flex cursor-pointer items-center gap-2 rounded-md border p-3 text-sm transition-colors",
+                      checked ? "border-[#00C5A1] bg-[#E6FAF6]/50" : "border-[#E2E8F0]"
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => {
+                        const next = checked
+                          ? values.services.types.filter((t) => t !== svc.value)
+                          : [...values.services.types, svc.value];
+                        form.setValue("services.types", next, { shouldValidate: true });
+                      }}
+                      className="rounded border-[#E2E8F0]"
+                    />
+                    {svc.label}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+
+          <div>
+            <Label className={labelClass}>Special Areas</Label>
+            <div className="flex flex-wrap gap-2">
+              {SPECIAL_AREAS.map((area) => {
+                const selected = values.facility.specialAreas.includes(area);
+                return (
+                  <button
+                    key={area}
+                    type="button"
+                    onClick={() => {
+                      const next = selected
+                        ? values.facility.specialAreas.filter((a) => a !== area)
+                        : [...values.facility.specialAreas, area];
+                      form.setValue("facility.specialAreas", next);
+                    }}
+                    className={cn(
+                      "rounded-full border px-3 py-1 text-xs font-medium transition-colors",
+                      selected
+                        ? "border-[#00C5A1] bg-[#E6FAF6] text-[#009980]"
+                        : "border-[#E2E8F0] text-[#64748B]"
+                    )}
+                  >
+                    {area}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* Pricing */}
+        <section className="space-y-4">
+          <SectionHeader title="Pricing" accent />
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <Label className={labelClass}>Monthly Fee (calculated)</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-[#64748B]">$</span>
+                <Input
+                  readOnly
+                  value={pricingPreview ? pricingPreview.monthlyPrice.toLocaleString() : "—"}
+                  className={cn(fieldClass, "pl-7 bg-[#F8F7F4]")}
+                />
+              </div>
+            </div>
+            <div>
+              <Label className={labelClass}>Promotional Code</Label>
+              <Input
+                id="promoCode"
+                placeholder="e.g. WELCOME10"
+                className={fieldClass}
+                {...form.register("customization.promoCode")}
+              />
+              {promoInfo && "invalid" in promoInfo && (
+                <p className={errorClass}>Invalid promo code</p>
+              )}
+              {promoInfo && !("invalid" in promoInfo) && (
+                <p className="mt-1 text-xs text-[#059669]">{promoInfo.label}</p>
+              )}
+            </div>
+            <div>
+              <Label htmlFor="discount" className={labelClass}>Additional Discount %</Label>
+              <Input id="discount" type="number" className={fieldClass} {...form.register("customization.discountPct")} />
+            </div>
+            <div>
+              <Label className={labelClass}>Service Time</Label>
+              <Select
+                value={values.services.serviceTime}
+                onValueChange={(v) => form.setValue("services.serviceTime", v)}
+              >
+                <SelectTrigger className={fieldClass}><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {SERVICE_TIMES.map((t) => (
+                    <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          {pricingPreview && (
+            <div className="rounded-md border border-[#E2E8F0] bg-[#F8F7F4] p-4">
+              <p className="text-xs text-[#64748B]">Auto-calculated annual value</p>
+              <p
+                className="text-lg font-bold text-[#1A1D23]"
+                style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+              >
+                {formatCurrency(pricingPreview.annualPrice)}/yr
+              </p>
+            </div>
+          )}
+        </section>
+
+        {/* Notes */}
+        <section className="space-y-4">
+          <SectionHeader title="Notes" accent />
+          <div>
+            <Label htmlFor="notes" className={labelClass}>Special Instructions</Label>
+            <Textarea
+              id="notes"
+              rows={4}
+              className={cn(fieldClass, "h-auto min-h-[100px]")}
+              {...form.register("customization.notes")}
+            />
+          </div>
+          <div>
+            <Label className={labelClass}>How did they hear about you?</Label>
+            <Select
+              value={values.customization.source ?? ""}
+              onValueChange={(v) => form.setValue("customization.source", v)}
+            >
+              <SelectTrigger className={fieldClass}>
+                <SelectValue placeholder="Select source" />
+              </SelectTrigger>
+              <SelectContent>
+                {LEAD_SOURCES.map((s) => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </section>
+
+        {error && (
+          <div className="rounded-md border border-[#F43F5E]/30 bg-[#FFF1F2] px-4 py-3 text-sm text-[#F43F5E]">
+            {error}
+          </div>
+        )}
+
+        {/* AI Generate */}
+        <button
+          type="button"
+          disabled={submitting}
+          onClick={() => handleSubmit(false)}
+          className={cn(
+            "relative flex h-11 w-full items-center justify-center gap-2 overflow-hidden rounded-lg text-[15px] font-bold text-white transition-opacity disabled:opacity-70",
+            submitting && "animate-shimmer bg-gradient-to-r from-[#00C5A1] via-[#33d4b5] to-[#00C5A1] bg-[length:200%_100%]"
+          )}
+          style={
+            submitting
+              ? undefined
+              : { background: "linear-gradient(135deg, #00C5A1 0%, #009980 100%)" }
+          }
+        >
+          {submitting ? (
+            <>
+              <Loader2 className="h-5 w-5 animate-spin" />
+              Generating with AI…
+            </>
+          ) : (
+            <>
+              <Sparkles className="h-5 w-5" />
+              AI Generate Proposal
+            </>
+          )}
+        </button>
+
+        {/* Action buttons */}
+        <div className="flex gap-3">
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={() => handleSubmit(false)}
+            className="flex-1 rounded-md border border-[#E2E8F0] py-2.5 text-sm font-medium text-[#334155] transition-colors hover:bg-[#F8F7F4] disabled:opacity-50"
+          >
+            Save Draft
+          </button>
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={() => handleSubmit(true)}
+            className="flex-1 rounded-md bg-[#00C5A1] py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#009980] disabled:opacity-50"
+          >
+            Send Proposal
+          </button>
+        </div>
       </div>
 
-      <div className="lg:col-span-1">
-        {pricingPreview && (
-          <PricePreview
+      {/* Right — Live Preview (40%) */}
+      <div className="lg:col-span-2">
+        {pricingPreview ? (
+          <ProposalLivePreview
+            values={values}
             monthlyPrice={pricingPreview.monthlyPrice}
             annualPrice={pricingPreview.annualPrice}
             lineItems={pricingPreview.lineItems}
             discountApplied={pricingPreview.discountApplied}
-            priceLow={pricingPreview.priceLow}
-            priceHigh={pricingPreview.priceHigh}
           />
-        )}
-        {step >= 1 && pricingPreview && (
-          <p className="mt-4 text-center text-xs text-brand-muted">
-            Estimate for {formatCurrency(values.facility.squareFootage)} sq ft · {values.facility.type.replace("_", " ")}
-          </p>
+        ) : (
+          <div
+            className="sticky top-6 rounded-lg border border-dashed border-[#E2E8F0] bg-white p-6 text-center text-sm text-[#64748B]"
+          >
+            Fill in facility and service details to see live pricing preview.
+          </div>
         )}
       </div>
     </div>

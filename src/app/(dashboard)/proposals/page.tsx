@@ -1,12 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { Header } from "@/components/layout/header";
 import { ProposalsTable } from "@/components/dashboard/proposals-table";
-import { Button } from "@/components/ui/button";
-import { DashboardSkeleton } from "@/components/ui/skeleton";
-import { FileText, Plus } from "lucide-react";
+import LoadingSkeleton from "@/components/ui/clean/LoadingSkeleton";
 import type { DemoProposal } from "@/lib/types/proposal";
 
 export default function ProposalsPage() {
@@ -29,31 +26,32 @@ export default function ProposalsPage() {
 
   return (
     <>
-      <Header title="Proposals" subtitle="Manage and track all proposals" showNewProposal={false} />
-      <main className="flex-1 space-y-6 p-4 lg:p-8">
-        <div className="flex flex-wrap items-center justify-between gap-4 animate-fade-in">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-primary/10">
-              <FileText className="h-5 w-5 text-brand-primary" />
-            </div>
-            <div>
-              <p className="font-semibold text-brand-text">{proposals.length} proposals</p>
-              <p className="text-sm text-brand-muted">Search, filter, and manage your pipeline</p>
-            </div>
-          </div>
-          <Button asChild>
-            <Link href="/proposals/new">
-              <Plus className="h-4 w-4" /> New Proposal
-            </Link>
-          </Button>
+      <Header title="All Proposals" showNewProposal />
+      <main className="flex-1 p-6">
+        {/* Page header */}
+        <div className="mb-6 flex flex-wrap items-center gap-3">
+          <h2
+            className="text-[22px] font-bold text-[#1A1D23]"
+            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+          >
+            All Proposals
+          </h2>
+          {!loading && (
+            <span className="rounded-full bg-[#F1F5F9] px-3 py-1 text-[13px] font-medium text-[#64748B]">
+              {proposals.length} proposals
+            </span>
+          )}
         </div>
 
         {loading ? (
-          <DashboardSkeleton />
-        ) : (
-          <div className="animate-fade-in">
-            <ProposalsTable proposals={proposals} onRefresh={load} />
+          <div className="space-y-4">
+            <LoadingSkeleton className="h-9 w-[340px]" />
+            <LoadingSkeleton variant="row" />
+            <LoadingSkeleton variant="row" />
+            <LoadingSkeleton variant="row" />
           </div>
+        ) : (
+          <ProposalsTable proposals={proposals} onRefresh={load} />
         )}
       </main>
     </>

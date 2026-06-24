@@ -1,105 +1,113 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Header } from "@/components/layout/header";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { StatCard } from "@/components/ui/stat-card";
-import { DashboardSkeleton } from "@/components/ui/skeleton";
-import { formatCurrency } from "@/lib/utils";
-import {
-  BarChart3,
-  Calendar,
-  DollarSign,
-  Mail,
-  Target,
-  TrendingUp,
-} from "lucide-react";
-import type { DashboardStats, MonthlyAnalytics } from "@/lib/types/proposal";
+import StatCard from "@/components/ui/clean/StatCard";
+import LoadingSkeleton from "@/components/ui/clean/LoadingSkeleton";
+import { RevenueChart } from "@/components/analytics/revenue-chart";
+import { PipelineFunnel } from "@/components/analytics/pipeline-funnel";
+import { StatusPieChart } from "@/components/analytics/status-pie-chart";
+import { MonthlyBarChart } from "@/components/analytics/monthly-bar-chart";
+import { DollarSign, Target, TrendingUp, Clock } from "lucide-react";
+import type { DashboardStats, MonthlyAnalytics, PipelineColumn } from "@/lib/types/proposal";
 
 export default function AnalyticsPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [monthly, setMonthly] = useState<MonthlyAnalytics[]>([]);
+  const [pipeline, setPipeline] = useState<PipelineColumn[]>([]);
+  const [proposals, setProposals] = useState<{ status: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     Promise.all([
       fetch("/api/v1/analytics/pipeline").then((r) => r.json()),
       fetch("/api/v1/analytics/monthly?months=6").then((r) => r.json()),
-    ]).then(([pipeline, monthlyData]) => {
-      setStats(pipeline.stats ?? null);
+      fetch("/api/v1/proposals").then((r) => r.json()),
+    ]).then(([pipelineData, monthlyData, proposalsData]) => {
+      setStats(pipelineData.stats ?? null);
+      setPipeline(pipelineData.pipeline ?? []);
       setMonthly(monthlyData.months ?? []);
+      setProposals(proposalsData.proposals ?? []);
       setLoading(false);
     });
   }, []);
 
-  const kpiCards = stats
-    ? [
-        { label: "Open Rate", value: `${stats.openRate}%`, icon: Mail, accent: "primary" as const },
-        { label: "Conversion Rate", value: `${stats.conversionRate}%`, icon: Target, accent: "accent" as const },
-        { label: "Pipeline Value", value: formatCurrency(stats.pipelineValue), icon: TrendingUp, accent: "primary" as const },
-        { label: "Avg Proposal Value", value: formatCurrency(stats.avgProposalValue), icon: BarChart3, accent: "neutral" as const },
-        { label: "Revenue Won (MTD)", value: formatCurrency(stats.revenueWon), icon: DollarSign, accent: "accent" as const },
-        { label: "Proposals Sent (MTD)", value: String(stats.proposalsSent), icon: Mail, accent: "primary" as const },
-        ...(stats.avgDaysToClose
-          ? [{ label: "Avg Days to Close", value: `${stats.avgDaysToClose} days`, icon: Calendar, accent: "neutral" as const }]
-          : []),
-      ]
-    : [];
+  const statusCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const p of proposals) {
+      map.set(p.status, (map.get(p.status) ?? 0) + 1);
+    }
+    return Array.from(map.entries()).map(([status, count]) => ({ status, count }));
+  }, [proposals]);
 
   return (
     <>
       <Header title="Analytics" subtitle="Performance metrics and conversion insights" />
-      <main className="flex-1 space-y-8 p-4 lg:p-8">
+      <main className="flex-1 space-y-8 p-6">
         {loading ? (
-          <DashboardSkeleton />
-        ) : (
-          <div className="space-y-8 animate-fade-in">
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {kpiCards.map((item) => (
-                <StatCard
-                  key={item.label}
-                  label={item.label}
-                  value={item.value}
-                  icon={item.icon}
-                  accent={item.accent}
-                />
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <LoadingSkeleton key={i} variant="card" />
               ))}
             </div>
-
-            <Card>
-              <CardHeader className="border-b border-brand-border/40 bg-gradient-to-r from-brand-primary/[0.04] to-transparent">
-                <CardTitle className="text-base">Monthly Performance (6 months)</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <div className="overflow-x-auto scrollbar-thin">
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>Month</th>
-                        <th>Sent</th>
-                        <th>Won</th>
-                        <th>Revenue</th>
-                        <th>Open Rate</th>
-                        <th>Conversion</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {monthly.map((row) => (
-                        <tr key={row.month}>
-                          <td className="font-semibold text-brand-text">{row.month}</td>
-                          <td>{row.proposalsSent}</td>
-                          <td>{row.proposalsWon}</td>
-                          <td className="font-medium text-brand-accent">{formatCurrency(row.revenueWon)}</td>
-                          <td>{row.openRate}%</td>
-                          <td>{row.conversionRate}%</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
+            <LoadingSkeleton variant="card" className="h-72" />
           </div>
+        ) : (
+          stats && (
+            <div className="space-y-8">
+              {/* Top metrics 2x2 */}
+              <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <StatCard
+                  label="Total Pipeline Value"
+                  value={stats.pipelineValue}
+                  icon={TrendingUp}
+                  iconColor="#00C5A1"
+                  prefix="$"
+                  trend={{ label: "Active pipeline", direction: "up" }}
+                />
+                <StatCard
+                  label="Avg Deal Size"
+                  value={stats.avgProposalValue}
+                  icon={DollarSign}
+                  iconColor="#3B82F6"
+                  prefix="$"
+                  trend={{ label: "Per proposal", direction: "neutral" }}
+                />
+                <StatCard
+                  label="Win Rate"
+                  value={stats.conversionRate}
+                  icon={Target}
+                  iconColor="#7C3AED"
+                  isPercentage
+                  trend={{ label: "Conversion rate", direction: "up" }}
+                />
+                <StatCard
+                  label="Avg Time to Close"
+                  value={stats.avgDaysToClose ?? 0}
+                  icon={Clock}
+                  iconColor="#F59E0B"
+                  suffix=" days"
+                  trend={{
+                    label: stats.avgDaysToClose ? "Historical avg" : "No data yet",
+                    direction: "neutral",
+                  }}
+                />
+              </section>
+
+              {/* Revenue line chart */}
+              <RevenueChart data={monthly} />
+
+              {/* Pipeline funnel */}
+              <PipelineFunnel columns={pipeline} />
+
+              {/* Bottom row */}
+              <section className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                <StatusPieChart statusCounts={statusCounts} />
+                <MonthlyBarChart data={monthly} />
+              </section>
+            </div>
+          )
         )}
       </main>
     </>

@@ -1,24 +1,27 @@
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils"
 
-function Skeleton({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) {
-  return <div className={cn("skeleton-shimmer rounded-lg", className)} {...props} />;
+function Skeleton({ className, ...props }: React.ComponentProps<"div">) {
+  return (
+    <div
+      data-slot="skeleton"
+      className={cn("animate-pulse rounded-md bg-muted", className)}
+      {...props}
+    />
+  )
 }
 
 function DashboardSkeleton() {
   return (
-    <div className="space-y-8 animate-fade-in">
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-5">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <Skeleton key={i} className="h-28 rounded-2xl" />
+    <div className="space-y-6 animate-pulse">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <Skeleton key={i} className="h-28 rounded-lg" />
         ))}
       </div>
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Skeleton className="h-64 rounded-2xl lg:col-span-2" />
-        <Skeleton className="h-64 rounded-2xl" />
-      </div>
-      <Skeleton className="h-96 rounded-2xl" />
+      <Skeleton className="h-64 rounded-lg" />
+      <Skeleton className="h-48 rounded-lg" />
     </div>
-  );
+  )
 }
 
-export { Skeleton, DashboardSkeleton };
+export { Skeleton, DashboardSkeleton }

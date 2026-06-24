@@ -6,18 +6,18 @@ import {
   BarChart3,
   FileText,
   LayoutDashboard,
+  PlusCircle,
   Settings,
   Sparkles,
   Users,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { APP_NAME } from "@/lib/constants";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, exact: true },
   { href: "/proposals", label: "Proposals", icon: FileText, exact: true },
-  { href: "/proposals/new", label: "New Proposal", icon: Sparkles, exact: true, highlight: true },
+  { href: "/proposals/new", label: "New Proposal", icon: PlusCircle, exact: true },
   { href: "/prospects", label: "Prospects", icon: Users, exact: true },
   { href: "/analytics", label: "Analytics", icon: BarChart3, exact: true },
   { href: "/settings", label: "Settings", icon: Settings, exact: true },
@@ -37,8 +37,8 @@ export function SidebarNav({ onNavigate, className }: SidebarNavProps) {
   const pathname = usePathname();
 
   return (
-    <nav className={cn("flex-1 space-y-1 p-3", className)}>
-      {navItems.map(({ href, label, icon: Icon, exact, highlight }) => {
+    <nav className={cn("flex-1 space-y-0.5 px-3 py-2", className)}>
+      {navItems.map(({ href, label, icon: Icon, exact }) => {
         const active = isActive(pathname, href, exact);
         return (
           <Link
@@ -46,22 +46,16 @@ export function SidebarNav({ onNavigate, className }: SidebarNavProps) {
             href={href}
             onClick={onNavigate}
             className={cn(
-              "group relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
-              active && "nav-item-active",
-              !active && "text-brand-muted hover:bg-slate-50 hover:text-brand-text",
-              highlight && !active && "text-brand-primary hover:bg-brand-primary/[0.06]"
+              "relative flex h-10 items-center gap-3 rounded-md px-3 text-sm font-medium transition-colors duration-150",
+              active
+                ? "border-l-2 border-[#00C5A1] bg-[rgba(0,197,161,0.12)] text-[#00C5A1]"
+                : "border-l-2 border-transparent text-[#94A3B8] hover:bg-[rgba(255,255,255,0.06)] hover:text-[#E2E8F0]"
             )}
           >
-            <div
-              className={cn(
-                "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
-                active && "bg-brand-primary text-white shadow-soft",
-                !active && "bg-slate-100 text-brand-muted group-hover:bg-brand-primary/10 group-hover:text-brand-primary",
-                highlight && !active && "bg-brand-primary/10 text-brand-primary"
-              )}
-            >
-              <Icon className="h-4 w-4" />
-            </div>
+            <Icon
+              className="h-[18px] w-[18px] shrink-0"
+              style={{ color: active ? "#00C5A1" : "#64748B" }}
+            />
             {label}
           </Link>
         );
@@ -81,14 +75,14 @@ export function MobileSidebar({ open, onClose }: MobileSidebarProps) {
   return (
     <div className="fixed inset-0 z-50 lg:hidden">
       <div
-        className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={onClose}
         aria-hidden
       />
-      <aside className="absolute left-0 top-0 flex h-full w-72 flex-col bg-white shadow-2xl animate-slide-in">
+      <aside className="absolute left-0 top-0 flex h-full w-[240px] flex-col bg-[#1A1D23] shadow-2xl">
         <SidebarBrand onClose={onClose} mobile />
         <SidebarNav onNavigate={onClose} />
-        <SidebarFooter />
+        <SidebarUserCard />
       </aside>
     </div>
   );
@@ -96,14 +90,17 @@ export function MobileSidebar({ open, onClose }: MobileSidebarProps) {
 
 function SidebarBrand({ onClose, mobile }: { onClose?: () => void; mobile?: boolean }) {
   return (
-    <div className="flex h-16 items-center justify-between border-b border-brand-border/60 px-4">
-      <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-primary to-brand-primary-light text-white shadow-glow">
-          <Sparkles className="h-4 w-4" />
-        </div>
+    <div className="flex items-center justify-between px-5 py-5">
+      <div className="flex items-center gap-2.5">
+        <Sparkles className="h-5 w-5 shrink-0 text-[#00C5A1]" />
         <div>
-          <span className="font-bold tracking-tight text-brand-text">{APP_NAME}</span>
-          <p className="text-[10px] font-medium uppercase tracking-wider text-brand-muted">
+          <span
+            className="text-base font-bold text-white"
+            style={{ fontFamily: "'Plus Jakarta Sans', sans-serif" }}
+          >
+            CleanProposal
+          </span>
+          <p className="text-[10px] font-medium uppercase tracking-[0.12em] text-[#64748B]">
             Revenue Engine
           </p>
         </div>
@@ -112,7 +109,7 @@ function SidebarBrand({ onClose, mobile }: { onClose?: () => void; mobile?: bool
         <button
           type="button"
           onClick={onClose}
-          className="rounded-xl p-2 text-brand-muted transition-colors hover:bg-slate-100"
+          className="rounded-md p-1.5 text-[#94A3B8] transition-colors hover:bg-white/10 hover:text-white"
           aria-label="Close menu"
         >
           <X className="h-5 w-5" />
@@ -122,14 +119,19 @@ function SidebarBrand({ onClose, mobile }: { onClose?: () => void; mobile?: bool
   );
 }
 
-function SidebarFooter() {
+function SidebarUserCard() {
   return (
-    <div className="border-t border-brand-border/60 p-4">
-      <div className="rounded-xl bg-gradient-to-br from-brand-primary/[0.06] to-brand-accent/[0.06] p-3">
-        <p className="text-xs font-semibold text-brand-text">Demo Mode Active</p>
-        <p className="mt-1 text-[11px] leading-relaxed text-brand-muted">
-          Full proposal workflow with AI generation & follow-ups
-        </p>
+    <div className="mt-auto border-t border-white/[0.08] p-4">
+      <div className="flex items-center gap-3">
+        <div
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#00C5A1] text-xs font-semibold text-white"
+        >
+          SC
+        </div>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium text-[#E2E8F0]">Sarah Chen</p>
+          <p className="truncate text-xs text-[#64748B]">Sales Owner</p>
+        </div>
       </div>
     </div>
   );
@@ -137,10 +139,10 @@ function SidebarFooter() {
 
 export function Sidebar() {
   return (
-    <aside className="hidden w-[272px] flex-col border-r border-brand-border/60 bg-white lg:flex">
+    <aside className="fixed left-0 top-0 z-30 hidden h-screen w-[240px] flex-col bg-[#1A1D23] lg:flex">
       <SidebarBrand />
       <SidebarNav />
-      <SidebarFooter />
+      <SidebarUserCard />
     </aside>
   );
 }

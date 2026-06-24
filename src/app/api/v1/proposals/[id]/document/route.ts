@@ -6,7 +6,8 @@ import { updateProposal } from "@/lib/services/proposals/repository";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(request: Request, props: { params: Promise<{ id: string }> }) {
+  const params = await props.params;
   const data = await getProposalById(params.id);
   if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
 

@@ -1,9 +1,10 @@
 import { ProposalDetailClient } from "@/components/proposals/proposal-detail-client";
 
 interface ProposalDetailPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }
 
-export default function ProposalDetailPage({ params }: ProposalDetailPageProps) {
-  return <ProposalDetailClient proposalId={params.id} />;
+export default async function ProposalDetailPage({ params }: ProposalDetailPageProps) {
+  const { id } = await params;
+  return <ProposalDetailClient proposalId={id} />;
 }

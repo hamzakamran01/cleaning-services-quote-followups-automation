@@ -3,7 +3,7 @@ import { runFollowUpEngine } from "@/lib/services/follow-up/engine";
 import { processNotOpenedProposals, processExpiredProposals } from "@/lib/services/proposals/repository";
 
 export const dynamic = "force-dynamic";
-
+export const maxDuration = 300; // Enterprise safeguard to allow OpenAI sufficient time to process batch follow-ups
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;

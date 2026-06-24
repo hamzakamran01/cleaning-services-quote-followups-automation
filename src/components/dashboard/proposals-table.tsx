@@ -2,73 +2,61 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { PROPOSAL_STATUSES } from "@/lib/constants";
+import { motion } from "framer-motion";
+import { STATUS_CONFIG, resolveStatusKey, type StatusKey } from "@/lib/design-tokens";
 import { formatCurrency, formatRelativeTime } from "@/lib/utils";
 import type { DemoProposal } from "@/lib/types/proposal";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import CompanyAvatar from "@/components/ui/clean/CompanyAvatar";
+import StatusBadge from "@/components/ui/clean/StatusBadge";
+import ProposalIdChip from "@/components/ui/clean/ProposalIdChip";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  ArrowDown,
-  ArrowUp,
-  CheckCircle,
-  ExternalLink,
+  ChevronLeft,
+  ChevronRight,
+  Edit,
+  Eye,
+  MoreHorizontal,
   Search,
-  XCircle,
 } from "lucide-react";
-import { toast } from "sonner";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { cn } from "@/lib/utils";
 
 interface ProposalsTableProps {
   proposals: DemoProposal[];
   onRefresh?: () => void;
 }
 
-type SortKey = "companyName" | "monthlyPrice" | "sentAt" | "lastActivity" | "followUpCount";
+const PAGE_SIZE = 10;
 
-const avatarColors = [
-  "bg-blue-500", "bg-violet-500", "bg-emerald-500",
-  "bg-amber-500", "bg-rose-500", "bg-indigo-500",
-  "bg-teal-500", "bg-orange-500",
+const FILTER_STATUSES: { value: string; label: StatusKey }[] = [
+  { value: "all", label: "Draft" },
+  { value: "draft", label: "Draft" },
+  { value: "sent", label: "Sent" },
+  { value: "opened", label: "Opened" },
+  { value: "hot_lead", label: "Hot Lead" },
+  { value: "won", label: "Won" },
+  { value: "lost", label: "Lost" },
 ];
 
-function getAvatarColor(name: string) {
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  return avatarColors[Math.abs(hash) % avatarColors.length];
-}
-
-function getInitials(name: string) {
-  return name.split(" ").slice(0, 2).map((w) => w[0]).join("").toUpperCase();
-}
-
-function getStatusBadge(status: string) {
-  const config = PROPOSAL_STATUSES.find((s) => s.value === status);
+function StatusFilterDot({ statusKey }: { statusKey: StatusKey }) {
+  const config = STATUS_CONFIG[statusKey];
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${config?.color ?? "bg-slate-100 text-slate-700"}`}>
-      <span className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />
-      {config?.label ?? status}
-    </span>
+    <span
+      className="h-2 w-2 shrink-0 rounded-full"
+      style={{ backgroundColor: config.dot }}
+    />
   );
-}
-
-function getFollowUpPill(count: number) {
-  if (count === 0) return <span className="urgency-none">—</span>;
-  if (count <= 2) return <span className="urgency-low">{count}×</span>;
-  return <span className="urgency-high">{count}×</span>;
 }
 
 export function ProposalsTable({ proposals, onRefresh }: ProposalsTableProps) {
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [sortKey, setSortKey] = useState<SortKey>("lastActivity");
-  const [sortAsc, setSortAsc] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [page, setPage] = useState(1);
+  const [statusOpen, setStatusOpen] = useState(false);
 
   const filtered = useMemo(() => {
     let rows = [...proposals];
@@ -82,190 +70,259 @@ export function ProposalsTable({ proposals, onRefresh }: ProposalsTableProps) {
       );
     }
     if (statusFilter !== "all") {
-      rows = rows.filter((p) => p.status === statusFilter);
-    }
-    rows.sort((a, b) => {
-      const av = a[sortKey] ?? "";
-      const bv = b[sortKey] ?? "";
-      if (typeof av === "number" && typeof bv === "number") {
-        return sortAsc ? av - bv : bv - av;
+      if (statusFilter === "sent") {
+        rows = rows.filter((p) => p.status === "sent" || p.status === "not_opened");
+      } else if (statusFilter === "opened") {
+        rows = rows.filter((p) => p.status === "opened" || p.status === "viewed_pricing");
+      } else {
+        rows = rows.filter((p) => p.status === statusFilter);
       }
-      return sortAsc
-        ? String(av).localeCompare(String(bv))
-        : String(bv).localeCompare(String(av));
-    });
-    return rows;
-  }, [proposals, search, statusFilter, sortKey, sortAsc]);
-
-  async function handleStatus(id: string, status: "won" | "lost") {
-    const res = await fetch(`/api/v1/proposals/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status }),
-    });
-    if (res.ok) {
-      toast.success(status === "won" ? "🏆 Marked as Won" : "Marked as Lost");
-      onRefresh?.();
     }
-  }
+    return rows;
+  }, [proposals, search, statusFilter]);
 
-  function toggleSort(key: SortKey) {
-    if (sortKey === key) setSortAsc(!sortAsc);
-    else { setSortKey(key); setSortAsc(false); }
-  }
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const currentPage = Math.min(page, totalPages);
+  const paginated = filtered.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE);
+  const rangeStart = filtered.length === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(currentPage * PAGE_SIZE, filtered.length);
 
-  const SortIcon = sortAsc ? ArrowUp : ArrowDown;
-
-  function SortBtn({ label, k }: { label: string; k: SortKey }) {
-    return (
-      <button
-        type="button"
-        className={`flex items-center gap-1 transition-colors hover:text-brand-primary ${sortKey === k ? "font-bold text-brand-primary" : ""
-          }`}
-        onClick={() => toggleSort(k)}
-      >
-        {label}
-        {sortKey === k && <SortIcon className="h-3 w-3" />}
-      </button>
-    );
-  }
+  const filterLabel =
+    statusFilter === "all"
+      ? "All statuses"
+      : FILTER_STATUSES.find((s) => s.value === statusFilter)?.label ?? statusFilter;
 
   return (
     <div className="space-y-4">
-      {/* Filter / search bar */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-        <div className="relative max-w-sm flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-muted" />
-          <Input
-            placeholder="Search company, contact, proposal #…"
+      {/* Filter row */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative w-full max-w-[340px]">
+          <Search className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#94A3B8]" />
+          <input
+            type="search"
+            placeholder="Search company, contact, proposal #..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setPage(1);
+            }}
+            className="h-9 w-full rounded-md border border-[#E2E8F0] bg-white pl-9 pr-3 text-[13px] text-[#1A1D23] placeholder:text-[#94A3B8] focus:border-[#00C5A1] focus:outline-none focus:ring-[3px] focus:ring-[rgba(0,197,161,0.15)]"
           />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Filter status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All statuses</SelectItem>
-            {PROPOSAL_STATUSES.map((s) => (
-              <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+
+        <DropdownMenu open={statusOpen} onOpenChange={setStatusOpen}>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="inline-flex h-9 w-[160px] items-center justify-between rounded-md border border-[#E2E8F0] bg-white px-3 text-[13px] text-[#334155] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2"
+            >
+              <span className="flex items-center gap-2 truncate">
+                {statusFilter !== "all" && (
+                  <StatusFilterDot statusKey={resolveStatusKey(statusFilter)} />
+                )}
+                {filterLabel}
+              </span>
+              <ChevronRight className="h-4 w-4 rotate-90 text-[#94A3B8]" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-[160px]">
+            <DropdownMenuItem
+              onClick={() => {
+                setStatusFilter("all");
+                setPage(1);
+              }}
+            >
+              All statuses
+            </DropdownMenuItem>
+            {(["draft", "sent", "opened", "hot_lead", "won", "lost"] as const).map((val) => (
+              <DropdownMenuItem
+                key={val}
+                onClick={() => {
+                  setStatusFilter(val);
+                  setPage(1);
+                }}
+                className="flex items-center gap-2"
+              >
+                <StatusFilterDot statusKey={resolveStatusKey(val)} />
+                {resolveStatusKey(val)}
+              </DropdownMenuItem>
             ))}
-          </SelectContent>
-        </Select>
-        <div className="flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1">
-          <span className="text-xs font-semibold text-brand-muted">{filtered.length}</span>
-          <span className="text-xs text-brand-muted">proposals</span>
-        </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Table */}
-      <div className="overflow-x-auto rounded-2xl border border-brand-border/80 bg-white" style={{ boxShadow: "var(--shadow-sm)" }}>
-        <table className="data-table">
+      <div className="overflow-x-auto rounded-lg border border-black/[0.07] bg-white">
+        <table className="w-full min-w-[960px]">
           <thead>
-            <tr>
-              <th><SortBtn label="Company" k="companyName" /></th>
-              <th>Proposal #</th>
-              <th><SortBtn label="Monthly / Annual" k="monthlyPrice" /></th>
-              <th>Status</th>
-              <th><SortBtn label="Sent" k="sentAt" /></th>
-              <th><SortBtn label="Last Activity" k="lastActivity" /></th>
-              <th><SortBtn label="F/U" k="followUpCount" /></th>
-              <th>Next Action</th>
-              <th>Actions</th>
+            <tr className="border-b border-black/[0.06] bg-[#F8F7F4]">
+              {[
+                "Company",
+                "Proposal #",
+                "Monthly/Annual",
+                "Status",
+                "Sent",
+                "Last Activity",
+                "F/U",
+                "Next Action",
+                "Actions",
+              ].map((col) => (
+                <th
+                  key={col}
+                  className="px-4 py-3 text-left text-[11px] font-medium uppercase tracking-[0.08em] text-[#94A3B8]"
+                >
+                  {col}
+                </th>
+              ))}
             </tr>
           </thead>
-          <tbody>
-            {filtered.map((p) => {
-              const initials = getInitials(p.companyName);
-              const avatarColor = getAvatarColor(p.companyName);
-              return (
-                <tr key={p.id} className="group">
-                  {/* Company + avatar */}
-                  <td>
+          <motion.tbody
+            initial="hidden"
+            animate="visible"
+            variants={{
+              visible: { transition: { staggerChildren: 0.04 } },
+            }}
+          >
+            {paginated.length === 0 ? (
+              <tr>
+                <td colSpan={9} className="px-4 py-12 text-center text-sm text-[#64748B]">
+                  No proposals match your filters.
+                </td>
+              </tr>
+            ) : (
+              paginated.map((p) => (
+                <motion.tr
+                  key={p.id}
+                  variants={{
+                    hidden: { opacity: 0, x: -8 },
+                    visible: { opacity: 1, x: 0 },
+                  }}
+                  className="group border-b border-[#F1F5F9] transition-colors duration-100 last:border-0 hover:bg-[#F8F7F4]"
+                  style={{ height: 72 }}
+                >
+                  <td className="px-4 py-3">
                     <div className="flex items-center gap-3">
-                      <div className={`avatar-chip ${avatarColor}`}>{initials}</div>
+                      <CompanyAvatar companyName={p.companyName} size={32} />
                       <div>
-                        <p className="font-semibold text-brand-text">{p.companyName}</p>
-                        <p className="text-xs text-brand-muted">{p.contactName}</p>
+                        <p className="text-sm font-semibold text-[#1A1D23]">{p.companyName}</p>
+                        <p className="text-xs text-[#64748B]">{p.contactName}</p>
                       </div>
                     </div>
                   </td>
-
-                  {/* Proposal # */}
-                  <td>
-                    <span className="rounded-md bg-slate-50 px-2 py-1 font-mono text-xs text-brand-muted">
-                      {p.proposalNumber}
-                    </span>
+                  <td className="px-4 py-3">
+                    <ProposalIdChip id={p.proposalNumber} className="text-xs" />
                   </td>
-
-                  {/* Monthly / Annual */}
-                  <td>
-                    <p className="font-bold text-brand-text">{formatCurrency(p.monthlyPrice)}<span className="ml-0.5 text-xs font-normal text-brand-muted">/mo</span></p>
-                    <p className="text-xs text-brand-muted">{formatCurrency(p.annualPrice)}/yr</p>
+                  <td className="px-4 py-3">
+                    <p className="text-sm font-bold text-[#1A1D23]">
+                      {formatCurrency(p.monthlyPrice)}
+                      <span className="text-xs font-normal text-[#64748B]">/mo</span>
+                    </p>
+                    <p className="text-xs text-[#94A3B8]">{formatCurrency(p.annualPrice)}/yr</p>
                   </td>
-
-                  {/* Status */}
-                  <td>{getStatusBadge(p.status)}</td>
-
-                  {/* Sent at */}
-                  <td className="text-brand-muted">{p.sentAt ? formatRelativeTime(p.sentAt) : "—"}</td>
-
-                  {/* Last activity */}
-                  <td className="text-brand-muted">{p.lastActivity ? formatRelativeTime(p.lastActivity) : "—"}</td>
-
-                  {/* Follow-ups urgency */}
-                  <td>{getFollowUpPill(p.followUpCount ?? 0)}</td>
-
-                  {/* Next action */}
-                  <td>
+                  <td className="px-4 py-3">
+                    <StatusBadge status={p.status} />
+                  </td>
+                  <td className="px-4 py-3 text-[13px] text-[#64748B]">
+                    {p.sentAt ? formatRelativeTime(p.sentAt) : "—"}
+                  </td>
+                  <td className="px-4 py-3 text-[13px] text-[#64748B]">
+                    {p.lastActivity ? formatRelativeTime(p.lastActivity) : "—"}
+                  </td>
+                  <td className="px-4 py-3">
+                    {(p.followUpCount ?? 0) > 0 ? (
+                      <span className="inline-flex rounded-full bg-[#FFFBEB] px-2 py-0.5 text-xs font-medium text-[#D97706]">
+                        {p.followUpCount}×
+                      </span>
+                    ) : (
+                      <span className="text-[13px] text-[#94A3B8]">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3">
                     {p.nextAction ? (
-                      <span className="inline-flex rounded-full bg-brand-primary/[0.07] px-2.5 py-1 text-xs font-medium text-brand-primary">
+                      <span className="inline-flex rounded-md bg-[#F1F5F9] px-2.5 py-1 text-xs font-medium text-[#334155]">
                         {p.nextAction}
                       </span>
                     ) : (
-                      <span className="text-xs text-brand-muted">—</span>
+                      <span className="text-[13px] text-[#94A3B8]">—</span>
                     )}
                   </td>
-
-                  {/* Actions — revealed on row hover */}
-                  <td>
-                    <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                      <Button variant="ghost" size="sm" asChild title="View proposal">
-                        <Link href={`/proposals/${p.id}`}>
-                          <ExternalLink className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                      {!["won", "lost", "expired"].includes(p.status) && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-emerald-600 hover:bg-emerald-50"
-                            onClick={() => handleStatus(p.id, "won")}
-                            title="Mark Won"
-                          >
-                            <CheckCircle className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-red-500 hover:bg-red-50"
-                            onClick={() => handleStatus(p.id, "lost")}
-                            title="Mark Lost"
-                          >
-                            <XCircle className="h-4 w-4" />
-                          </Button>
-                        </>
-                      )}
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-0.5 opacity-0 transition-opacity group-hover:opacity-100">
+                      <Link
+                        href={`/proposals/${p.id}`}
+                        className="rounded-md p-2 text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#1A1D23]"
+                        title="View"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Link>
+                      <Link
+                        href={`/proposals/${p.id}`}
+                        className="rounded-md p-2 text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#1A1D23]"
+                        title="Edit"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Link>
+                      <button
+                        type="button"
+                        className="rounded-md p-2 text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#1A1D23]"
+                        title="More"
+                        onClick={() => onRefresh?.()}
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </button>
                     </div>
                   </td>
-                </tr>
-              );
-            })}
-          </tbody>
+                </motion.tr>
+              ))
+            )}
+          </motion.tbody>
         </table>
+      </div>
+
+      {/* Pagination */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <p className="text-[13px] text-[#64748B]">
+          Showing {rangeStart}–{rangeEnd} of {filtered.length}
+        </p>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            disabled={currentPage <= 1}
+            onClick={() => setPage((p) => p - 1)}
+            className="inline-flex h-8 items-center gap-1 rounded-md border border-[#E2E8F0] px-2.5 text-[13px] text-[#64748B] disabled:opacity-40"
+          >
+            <ChevronLeft className="h-4 w-4" /> Prev
+          </button>
+          {Array.from({ length: totalPages }, (_, i) => i + 1)
+            .filter((n) => n === 1 || n === totalPages || Math.abs(n - currentPage) <= 1)
+            .map((n, idx, arr) => (
+              <span key={n} className="flex items-center">
+                {idx > 0 && arr[idx - 1] !== n - 1 && (
+                  <span className="px-1 text-[#94A3B8]">…</span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setPage(n)}
+                  className={cn(
+                    "flex h-8 min-w-8 items-center justify-center rounded-md text-[13px] font-medium",
+                    n === currentPage
+                      ? "bg-[#1A1D23] text-white"
+                      : "border border-[#E2E8F0] text-[#64748B] hover:bg-[#F8F7F4]"
+                  )}
+                >
+                  {n}
+                </button>
+              </span>
+            ))}
+          <button
+            type="button"
+            disabled={currentPage >= totalPages}
+            onClick={() => setPage((p) => p + 1)}
+            className="inline-flex h-8 items-center gap-1 rounded-md border border-[#E2E8F0] px-2.5 text-[13px] text-[#64748B] disabled:opacity-40"
+          >
+            Next <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </div>
   );

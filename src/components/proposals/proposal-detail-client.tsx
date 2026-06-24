@@ -136,7 +136,7 @@ export function ProposalDetailClient({ proposalId }: ProposalDetailClientProps) 
   const viewUrl = `${appUrl}/p/${proposal.trackingToken}`;
 
   const defaultSubject = `Commercial Cleaning Proposal for ${prospect.businessName}`;
-  const defaultBody = `<p>Dear ${prospect.fullName},</p><p>Please review your proposal: <a href="${viewUrl}">View Proposal</a></p><p>Monthly: $${(proposal.monthlyPrice as number).toLocaleString()}</p>`;
+  const defaultBody = `I have attached your customized commercial cleaning proposal.\n\nYour estimated investment is $${(proposal.monthlyPrice as number).toLocaleString()}/mo.\n\nPlease let me know if you have any questions or if you'd like to schedule a quick call to walk through the details.\n\nLooking forward to working with you!`;
 
   return (
     <>

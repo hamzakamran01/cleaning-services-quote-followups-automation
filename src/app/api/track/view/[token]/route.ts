@@ -5,7 +5,8 @@ const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request, { params }: { params: { token: string } }) {
+export async function GET(request: Request, props: { params: Promise<{ token: string }> }) {
+  const params = await props.params;
   const data = await getProposalByToken(params.token);
   if (!data) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
