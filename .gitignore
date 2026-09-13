@@ -1,39 +1,180 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
+# ========================================
+# DEPENDENCIES
+# ========================================
+node_modules/
 /.pnp
-.pnp.js
+.pnp.*
 .yarn/install-state.gz
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
 
-# testing
-/coverage
-
-# next.js
+# ========================================
+# NEXT.JS
+# ========================================
 /.next/
 /out/
+/build/
+next-env.d.ts
 
-# production
-/build
+# ========================================
+# TYPESCRIPT
+# ========================================
+*.tsbuildinfo
+tsconfig.tsbuildinfo
 
-# misc
-.DS_Store
+# ========================================
+# ENVIRONMENT VARIABLES & SECRETS
+# ========================================
+.env
+.env.*
+!.env.example
+!.env.template
 *.pem
+*.key
+*.cert
+*.crt
+*.p12
+*.pfx
+*.jks
 
-# debug
+# ========================================
+# VERCEL
+# ========================================
+.vercel
+
+# ========================================
+# PRISMA
+# ========================================
+# Prisma local databases (SQLite dev DBs)
+prisma/*.db
+prisma/*.db-journal
+
+# ========================================
+# SUPABASE
+# ========================================
+.supabase/
+
+# ========================================
+# TESTING & COVERAGE
+# ========================================
+/coverage/
+*.lcov
+.nyc_output/
+jest-results/
+test-results/
+playwright-report/
+
+# ========================================
+# IDE & EDITORS
+# ========================================
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+.idea/
+*.swp
+*.swo
+*.swn
+*~
+*.sublime-project
+*.sublime-workspace
+.project
+.classpath
+.settings/
+*.code-workspace
+
+# ========================================
+# OS-SPECIFIC FILES
+# ========================================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.nfs*
+
+# ========================================
+# DEBUG & LOG FILES
+# ========================================
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+.pnpm-store/
+lerna-debug.log*
+*.log
+logs/
 
-# local env files
-.env*.local
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-# local data store (demo mode)
+# ========================================
+# LOCAL DATA & TEMP FILES
+# ========================================
 .data/
+/tmp/
+*.tmp
+*.temp
+*.bak
+*.backup
+*.orig
+*.cache
+
+# ========================================
+# BUILD ARTIFACTS & COMPILED OUTPUT
+# ========================================
+dist/
+*.tgz
+*.tar.gz
+*.zip
+
+# ========================================
+# MISC & PROJECT-SPECIFIC
+# ========================================
+# Scratch / test files (not part of the app)
+output.txt
+output_utf8.txt
+test_db.ts
+test_fetch.js
+
+# Storybook
+storybook-static/
+
+# Chromium / Puppeteer cache
+.cache/
+chromium/
+
+# Sentry
+.sentryclirc
+
+# Docker
+docker-compose.override.yml
+
+# Turbo
+.turbo/
+
+# ESLint cache
+.eslintcache
+
+# Prettier cache
+.prettiercache
+
+# Cursor AI
+.cursorignore
+.cursor/
